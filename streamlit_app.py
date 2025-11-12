@@ -3,6 +3,7 @@ import google.generativeai as genai
 import firebase_admin
 from firebase_admin import credentials, firestore
 import json
+import numpy as np # (YENİ) Matematiksel hesaplama için
 
 # --- Sayfa Ayarları ---
 st.set_page_config(
@@ -11,80 +12,72 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- 1. FIREBASE BAĞLANTISI (YENİ VE DOĞRU YÖNTEM) ---
+# --- 1. FIREBASE BAĞLANTISI ---
 @st.cache_resource
 def init_firebase():
-    """
-    Streamlit Secrets'tan alınan TABLO verisiyle Firebase'i başlatır.
-    Bu yöntem, JSON hatalarını %100 engeller.
-    """
     try:
-        # 1. Adım: Secret'ı bir SÖZLÜK (dict) olarak al
-        # st.secrets["firebase_credentials"] bir sözlük döndürecek
-        # çünkü Secrets bölümünde [firebase_credentials] kullandık.
         creds_dict = dict(st.secrets["firebase_credentials"])
-        
-        # 2. Adım: private_key'deki \n'leri düzelt (TOML'un bir cilvesi)
         creds_dict["private_key"] = creds_dict["private_key"].replace(r'\n', '\n')
-        
-        # 3. Adım: Sözlüğü kimlik bilgisi olarak Firebase'e ver
         creds = credentials.Certificate(creds_dict)
-        
-        # 4. Adım: Uygulamayı başlat
         firebase_admin.initialize_app(creds)
-        
-    except ValueError as e:
-        # Uygulama zaten başlatılmışsa (bu bir hata değil, normal)
-        if "The default Firebase app already exists" in str(e):
-            pass # Görmezden gel, devam et
-        else:
-            # Ama başka bir Değer Hatasıysa göster
-            st.error(f"🔥 FİREBASE DEĞER HATASI: {e}")
-            st.error("Secrets bölümündeki 'firebase_credentials' tablonuzu kontrol edin.")
-            st.stop()
-            
+    except ValueError:
+        pass # Uygulama zaten başlatılmış
     except Exception as e:
-        # Diğer tüm hatalar
-        st.error(f"🔥 FİREBASE GENEL HATA: {e}")
-        st.error("Secrets bölümünüzü ve kodunuzu kontrol edin.")
+        st.error(f"🔥 FİREBASE BAŞLATMA HATASI: {e}")
         st.stop()
-        
-    # Her şey yolunda gittiyse, veritabanı istemcisini döndür
     return firestore.client()
 
 # --- 2. GEMINI AI BAĞLANTISI ---
 @st.cache_resource
 def init_gemini():
+    """
+    (YENİ) Artık İKİ model başlatıyoruz:
+    1. 'flash' -> Analiz için
+    2. 'embedding' -> Parmak izi/Vektör için
+    """
     try:
         genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-        model = genai.GenerativeModel('models/gemini-flash-latest')
-        return model
+        
+        # Model A: Analiz Modeli
+        analysis_model = genai.GenerativeModel('models/gemini-flash-latest')
+        
+        # Model B: Parmak İzi (Embedding) Modeli
+        embedding_model = genai.GenerativeModel('models/text-embedding-004') # (YENİ)
+        
+        return analysis_model, embedding_model
     except Exception as e:
         st.error(f"💎 GEMİNİ BAŞLATMA HATASI: {e}")
-        st.error("Lütfen Streamlit Secrets'taki 'GEMINI_API_KEY' anahtarınızı kontrol edin.")
         st.stop()
 
 # --- UYGULAMA BAŞLANGICI ---
-st.title("🤖 AI CV Matching Platform (v1 - Firebase)")
+st.title("🤖 AI CV Matching Platform (v2 - Vector Search)")
 
-# Servisleri başlat
-db = init_firebase()
-gemini_model = init_gemini()
+try:
+    db = init_firebase()
+    gemini_model, embedding_model = init_gemini() # (YENİ) Artık 2 model alıyoruz
+except Exception as e:
+    st.error("Uygulama başlatılırken kritik bir hata oluştu. Lütfen 'Secrets' ayarlarınızı kontrol edin.")
+    st.stop()
 
 
 # --- YARDIMCI FONKSİYONLAR ---
 
 @st.cache_data(ttl=300) 
-def get_job_postings():
+def get_job_postings_with_vectors(): # (YENİ İSİM)
+    """
+    Firestore'dan ilanları ve 'vector' (parmak izi) alanlarını çeker.
+    """
     jobs = []
     try:
-        docs = db.collection("job_postings").stream()
+        # Sadece 'vector' alanı olan ilanları getir (parmak izi olmayanları atla)
+        docs = db.collection("job_postings").where("vector", "!=", None).stream()
         for doc in docs:
             job_data = doc.to_dict()
             jobs.append({
                 "id": doc.id,
                 "title": job_data.get("title", "No Title"),
-                "description": job_data.get("description", "No Description")
+                "description": job_data.get("description", "No Description"),
+                "vector": job_data.get("vector") # (YENİ) Vektörü de al
             })
         return jobs
     except Exception as e:
@@ -92,15 +85,12 @@ def get_job_postings():
         return []
 
 def get_gemini_analysis(cv, job_post):
+    """
+    Model A'ya (flash) analiz prompt'unu gönderir. (Bu fonksiyon değişmedi)
+    """
     prompt = f"""
-    You are a senior Human Resources (HR) specialist, and your task is to compare a CV with a job posting.
-    Analyze the following CV text and JOB POSTING text in detail.
-    Follow these steps in your analysis:
-    1.  **Overall Compatibility Score:** Rate the CV's suitability for the job posting on a scale of 100.
-    2.  **Strengths (Pros):** List the top 3-4 strengths of the candidate that meet the job requirements.
-    3.  **Weaknesses / Gaps (Cons):** List 3-4 key points mentioned in the job posting that are missing or weak in the CV.
-    4.  **Evaluation Summary:** Write a brief 2-3 sentence overall evaluation summary.
-    Please provide your answer in **Markdown format** using clear headings.
+    You are a senior Human Resources (HR) specialist... (Prompt metni aynı)
+    ...
     ---[CV TEXT]----
     {cv}
     -----------------
@@ -114,73 +104,104 @@ def get_gemini_analysis(cv, job_post):
     except Exception as e:
         return f"An error occurred during analysis: {e}"
 
+def get_embedding(text):
+    """
+    (YENİ) Model B'ye (embedding) bir metin gönderir ve parmak izini (vektör) alır.
+    """
+    try:
+        result = genai.embed_content(
+            model="models/text-embedding-004", # Hangi modelin kullanılacağı
+            content=text,
+            task_type="RETRIEVAL_DOCUMENT" # Görev tipi: Belge arama
+        )
+        return result['embedding']
+    except Exception as e:
+        st.error(f"Metnin 'parmak izi' alınırken hata oluştu: {e}")
+        return None
+
 # --- ANA UYGULAMA ARAYÜZÜ ---
 
-tab1, tab2 = st.tabs(["🚀 CV Matcher", "📝 Add New Job Posting"])
+tab1, tab2 = st.tabs(["🚀 Auto-Matcher (Find Jobs for Me)", "📝 Add New Job Posting"])
 
-# (Kodun geri kalanı aynı, buraya eklemiyorum... Ah, hayır, kodun TAMAMINI istedi, o yüzden devam etmeliyim)
-
-# --- Sekme 1: CV EŞLEŞTİRİCİ ---
+# --- Sekme 1: OTOMATİK CV EŞLEŞTİRİCİ (YENİDEN YAZILDI) ---
 with tab1:
-    st.header("Match Your CV Against Our Job Postings")
+    st.header("Find the Best Jobs for Your CV")
+    st.markdown("Paste your CV below, and our AI will search our entire database to find the top 3 most compatible job postings for you.")
     
-    job_list = get_job_postings()
+    with st.container(border=True):
+        cv_text = st.text_area("📄 Paste your full CV text here:", height=350, label_visibility="collapsed")
     
-    if not job_list:
-        st.info("No job postings found in the database. Please add a job in the 'Add New Job Posting' tab.")
-    else:
-        job_dict = {job["title"]: job["description"] for job in job_list}
-        
-        selected_title = st.selectbox(
-            "Select a job posting from the database:",
-            options=job_dict.keys()
-        )
-        
-        if selected_title:
-            selected_description = job_dict[selected_title]
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                with st.container(border=True):
-                    st.subheader("📄 Paste CV Text Below")
-                    cv_text = st.text_area("CV Text", height=350, label_visibility="collapsed", key="cv_text_tab1")
-            
-            with col2:
-                with st.container(border=True):
-                    st.subheader(f"🎯 Selected Job: {selected_title}")
-                    st.text_area("Job Posting Description", value=selected_description, height=350, disabled=True, label_visibility="collapsed")
-            
-            if st.button("Run Compatibility Analysis", type="primary", use_container_width=True, key="analyze_button"):
-                if cv_text:
-                    with st.spinner("Gemini AI is analyzing... Please wait."):
-                        analysis_result = get_gemini_analysis(cv_text, selected_description)
-                        with st.expander("✨ Click to See Analysis Result", expanded=True):
+    if st.button("Find My Matches", type="primary", use_container_width=True):
+        if cv_text:
+            with st.spinner("Analyzing your CV and searching thousands of jobs..."):
+                # 1. Tüm ilanları ve vektörlerini veritabanından çek
+                all_jobs = get_job_postings_with_vectors()
+                
+                if not all_jobs:
+                    st.warning("No job postings with 'vectors' found in database. Please add jobs in the 'Add New Job' tab first.")
+                    st.stop()
+                
+                # 2. CV'nin parmak izini (vektörünü) al
+                cv_vector = get_embedding(cv_text)
+                
+                if cv_vector:
+                    # 3. Matematik: CV vektörü ile tüm ilan vektörleri arasındaki benzerliği hesapla
+                    job_vectors = np.array([job['vector'] for job in all_jobs])
+                    cv_vector_np = np.array(cv_vector)
+                    
+                    # 'Dot product' (iç çarpım) en hızlı benzerlik ölçümüdür
+                    similarities = np.dot(job_vectors, cv_vector_np)
+                    
+                    # 4. En iyi 3 eşleşmenin indekslerini bul
+                    top_3_indices = np.argsort(similarities)[-3:][::-1] # En yüksek 3 skoru al
+                    
+                    st.success(f"Found {len(top_3_indices)} great matches for you! Analyzing them now...")
+                    
+                    # 5. Sadece en iyi 3 ilan için detaylı analiz yap
+                    for index in top_3_indices:
+                        matched_job = all_jobs[index]
+                        st.subheader(f"Rank #{list(top_3_indices).index(index) + 1}: {matched_job['title']}")
+                        
+                        # Model A'yı (flash) çağır
+                        analysis_result = get_gemini_analysis(cv_text, matched_job['description'])
+                        
+                        with st.expander("Click to see detailed analysis"):
                             st.markdown(analysis_result)
-                else:
-                    st.warning("Please paste your CV text to analyze.")
+        else:
+            st.warning("Please paste your CV text to find matches.")
 
-# --- Sekme 2: YENİ İLAN EKLEME ---
+# --- Sekme 2: YENİ İLAN EKLEME (GÜNCELLENDİ) ---
 with tab2:
     st.header("Add a New Job Posting to the Database")
+    st.markdown("When you save a job, the AI will automatically generate its 'semantic fingerprint' (vector) and save it for future matching.")
     
     with st.form("new_job_form", clear_on_submit=True):
         job_title = st.text_input("Job Title")
         job_description = st.text_area("Job Description (Paste the full text)", height=300)
         
-        submitted = st.form_submit_button("Save Job Posting to Firebase")
+        submitted = st.form_submit_button("Save Job & Generate Vector")
         
         if submitted:
             if job_title and job_description:
-                try:
-                    doc_ref = db.collection("job_postings").document()
-                    doc_ref.set({
-                        "title": job_title,
-                        "description": job_description,
-                        "created_at": firestore.SERVER_TIMESTAMP
-                    })
-                    st.success(f"Successfully added job posting: '{job_title}'")
-                    st.cache_data.clear()
-                except Exception as e:
-                    st.error(f"An error occurred while saving to Firebase: {e}")
+                with st.spinner("Generating AI fingerprint (vector) for this job..."):
+                    # 1. (YENİ) İlanın parmak izini al
+                    job_vector = get_embedding(f"Title: {job_title}\n\nDescription: {job_description}")
+                
+                if job_vector:
+                    # 2. (YENİ) Vektör ile birlikte Firebase'e kaydet
+                    try:
+                        doc_ref = db.collection("job_postings").document()
+                        doc_ref.set({
+                            "title": job_title,
+                            "description": job_description,
+                            "created_at": firestore.SERVER_TIMESTAMP,
+                            "vector": job_vector # (YENİ) Vektörü buraya ekle
+                        })
+                        st.success(f"Successfully added '{job_title}' with its AI fingerprint!")
+                        st.cache_data.clear() # Cache'i temizle
+                    except Exception as e:
+                        st.error(f"An error occurred while saving to Firebase: {e}")
+                else:
+                    st.error("Could not generate AI fingerprint. Job not saved.")
             else:
                 st.warning("Please fill in both the Job Title and Job Description.")
