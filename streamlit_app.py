@@ -206,6 +206,7 @@ def main_app():
     tab1, tab2, tab3 = st.tabs(["🚀 Auto-Matcher", "📝 Job Management", "👤 My Profile"])
 
     # --- (GÜNCELLENDİ) Sekme 1: Auto-Matcher (Hızlandırıldı) ---
+  # --- Sekme 1: Auto-Matcher ---
     with tab1:
         st.header("Find the Best Jobs for Your CV")
         st.markdown("We will use the CV saved in your 'My Profile' tab. If it's empty, please paste your CV below.")
@@ -241,13 +242,12 @@ def main_app():
                     pool_size = min(len(all_jobs), CANDIDATE_POOL_SIZE)
                     top_candidate_indices = np.argsort(similarities)[-pool_size:][::-1]
 
-                # --- (YENİ) Adım 2: Paralel Analiz (Hızlı) ---
+                # --- Adım 2: Paralel Analiz (Hızlı) ---
                 analysis_results = []
-                progress_bar = st.progress(0, text=f"Step 2/3: Analyzing {pool_size} candidates... (0%)")
+                # (GÜNCELLENDİ) İlerleme çubuğunun başlangıç metni
+                progress_bar = st.progress(0, text=f"Step 2/3: Analyzing {pool_size} candidates... (0%)") 
 
-                # (YENİ) ThreadPoolExecutor kullanarak 10 işi aynı anda başlat
                 with concurrent.futures.ThreadPoolExecutor(max_workers=pool_size) as executor:
-                    # Gelecekteki işleri ve hangi ilana ait olduklarını sakla
                     future_to_job = {}
                     for index in top_candidate_indices:
                         matched_job = all_jobs[index]
@@ -258,7 +258,7 @@ def main_app():
                     for future in concurrent.futures.as_completed(future_to_job):
                         matched_job = future_to_job[future]
                         try:
-                            analysis_data = future.result() # İşi bitenin sonucunu al
+                            analysis_data = future.result() 
                             if analysis_data and analysis_data.get("score") is not None:
                                 analysis_results.append({
                                     "job": matched_job,
@@ -268,10 +268,10 @@ def main_app():
                         except Exception as e:
                             st.error(f"Error analyzing job '{matched_job['title']}': {e}")
                         
-                        # (YENİ) Yüzdelik ilerleme çubuğu
                         completed_count += 1
                         percent_complete = completed_count / pool_size
-                        progress_bar.progress(percent_complete, text=f"Step 2/3: Analyzing... {int(percent_complete * 100)}% complete")
+                        # (GÜNCELLENDİ) İlerleme çubuğunun güncelleme metni (yüzde gösterir)
+                        progress_bar.progress(percent_complete, text=f"Step 2/3: Analyzing... {int(percent_complete * 100)}% complete") 
                 
                 progress_bar.empty()
 
@@ -285,6 +285,10 @@ def main_app():
                     
                     end_time = time.time()
                     st.success(f"Done! Found and ranked your Top {TOP_N_RESULTS} matches in {end_time - start_time:.2f} seconds.")
+                    
+                    # (YENİ EKLEME) İşte animasyon burada!
+                    st.balloons() 
+                    
                     st.markdown("---")
 
                     for i, result in enumerate(sorted_results[:TOP_N_RESULTS]):
@@ -303,13 +307,23 @@ def main_app():
                                     st.subheader("Summary")
                                     st.write(analysis_data.get("summary", "N/A"))
                                     st.subheader("Strengths (Pros)")
-                                    for pro in analysis_data.get("pros", []): st.markdown(f"* {pro}")
+                                    # (GÜNCELLENDİ) Eğer veri yoksa "N/A" göstermek için
+                                    pros = analysis_data.get("pros", [])
+                                    if pros:
+                                        for pro in pros: st.markdown(f"* {pro}")
+                                    else:
+                                        st.write("N/A") 
                                     st.subheader("Weaknesses (Cons)")
-                                    for con in analysis_data.get("cons", []): st.markdown(f"* {con}")
+                                    # (GÜNCELLENDİ) Eğer veri yoksa "N/A" göstermek için
+                                    cons = analysis_data.get("cons", [])
+                                    if cons:
+                                        for con in cons: st.markdown(f"* {con}")
+                                    else:
+                                        st.write("N/A")
                         st.divider()
             else:
                 st.warning("Please paste your CV text to find matches.")
-
+                
     # --- Sekme 2: İlan Yönetimi (Toplu Yükleme dahil) ---
     with tab2:
         st.header("Job Management")
