@@ -41,7 +41,7 @@ def init_gemini():
         st.stop()
 
 # --- UYGULAMA BAŞLANGICI ---
-st.title("🤖 AI CV Matching Platform (v2.5 - Visual)")
+st.title("🤖 AI CV - Internship Match Platform (v2.5 - Visual)")
 
 try:
     db = init_firebase()
