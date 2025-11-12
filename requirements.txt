@@ -1,3 +1,4 @@
 streamlit
 google-generativeai
 firebase-admin
+numpy
