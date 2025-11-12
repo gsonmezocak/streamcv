@@ -125,8 +125,18 @@ def extract_score_from_text(text):
 
 def get_gemini_analysis(cv, job_post):
     prompt = f"""
-    You are a senior Human Resources (HR) specialist...
-    ...
+    You are a senior Human Resources (HR) specialist.
+    Analyze the following CV and JOB POSTING.
+    
+    Your response MUST be a valid JSON object with the following exact structure:
+    {{
+        "score": <number from 0-100>,
+        "pros": ["<strength 1>", "<strength 2>", "<strength 3>"],
+        "cons": ["<weakness 1>", "<weakness 2>", "<weakness 3>"],
+        "summary": "<A 2-3 sentence evaluation summary>"
+    }}
+    Overall Compatibility Score:
+    
     ---[CV TEXT]----
     {cv}
     -----------------
