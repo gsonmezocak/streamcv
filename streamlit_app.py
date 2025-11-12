@@ -6,162 +6,268 @@ import json
 import numpy as np
 import re
 
-# --- CUSTOM CSS STYLİNG ---
+# --- ULTRA MODERN GLASSMORPHISM CSS ---
 def load_custom_css():
     st.markdown("""
     <style>
-    /* Ana sayfa arka plan ve tipografi */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap');
+    
+    /* Dark animated background */
     .main {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 2rem;
+        background: linear-gradient(125deg, #0f0c29, #302b63, #24243e);
+        background-size: 400% 400%;
+        animation: gradientShift 15s ease infinite;
+        font-family: 'Inter', sans-serif;
+        padding: 0;
     }
     
-    /* Başlık stilleri */
-    h1 {
-        color: white !important;
-        text-align: center;
-        font-weight: 700 !important;
-        font-size: 3rem !important;
-        margin-bottom: 1rem !important;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    @keyframes gradientShift {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
     }
     
-    h2 {
-        color: #667eea !important;
-        font-weight: 600 !important;
-        margin-top: 1.5rem !important;
-    }
-    
-    h3 {
-        color: #764ba2 !important;
-        font-weight: 500 !important;
-    }
-    
-    /* Tab stilleri */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-        background-color: white;
-        border-radius: 10px;
-        padding: 8px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-    
-    .stTabs [data-baseweb="tab"] {
-        height: 50px;
-        background-color: #f8f9fa;
-        border-radius: 8px;
-        color: #667eea;
-        font-weight: 600;
-        font-size: 1.1rem;
-    }
-    
-    .stTabs [aria-selected="true"] {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white !important;
-    }
-    
-    /* Kart stilleri */
+    /* Glassmorphism container */
     [data-testid="stContainer"] {
-        background-color: white;
-        border-radius: 15px;
-        padding: 2rem;
-        box-shadow: 0 8px 16px rgba(0,0,0,0.15);
-        border: none !important;
-    }
-    
-    /* Textarea stilleri */
-    textarea {
-        border-radius: 10px !important;
-        border: 2px solid #e0e0e0 !important;
-        font-family: 'Courier New', monospace !important;
-        font-size: 0.9rem !important;
-    }
-    
-    textarea:focus {
-        border-color: #667eea !important;
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
-    }
-    
-    /* Button stilleri */
-    .stButton > button {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border: none;
-        border-radius: 10px;
-        padding: 0.75rem 2rem;
-        font-size: 1.1rem;
-        font-weight: 600;
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        background: rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-radius: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        padding: 2.5rem;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
         transition: all 0.3s ease;
     }
     
-    .stButton > button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+    [data-testid="stContainer"]:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 40px 0 rgba(31, 38, 135, 0.5);
     }
     
-    /* Metric kartları */
-    [data-testid="stMetricValue"] {
-        font-size: 2.5rem !important;
+    /* Neon glow titles */
+    h1 {
+        background: linear-gradient(90deg, #00F5FF, #FF00FF, #00F5FF);
+        background-size: 200% auto;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        animation: neonFlow 3s linear infinite;
+        font-size: 3.5rem !important;
+        font-weight: 800 !important;
+        text-align: center;
+        letter-spacing: 2px;
+        margin-bottom: 0.5rem !important;
+        filter: drop-shadow(0 0 20px rgba(0, 245, 255, 0.5));
+    }
+    
+    @keyframes neonFlow {
+        to { background-position: 200% center; }
+    }
+    
+    h2 {
+        color: #00F5FF !important;
         font-weight: 700 !important;
-        color: #667eea !important;
+        text-shadow: 0 0 10px rgba(0, 245, 255, 0.5);
+        margin-top: 0 !important;
+    }
+    
+    h3 {
+        color: #FF00FF !important;
+        font-weight: 600 !important;
+        text-shadow: 0 0 8px rgba(255, 0, 255, 0.4);
+    }
+    
+    /* Cyberpunk tabs */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 12px;
+        background: rgba(15, 12, 41, 0.6);
+        backdrop-filter: blur(15px);
+        border-radius: 15px;
+        padding: 12px;
+        border: 1px solid rgba(0, 245, 255, 0.3);
+    }
+    
+    .stTabs [data-baseweb="tab"] {
+        height: 55px;
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+        border-radius: 12px;
+        color: #00F5FF;
+        font-weight: 700;
+        font-size: 1.1rem;
+        border: 1px solid transparent;
+        transition: all 0.3s ease;
+    }
+    
+    .stTabs [data-baseweb="tab"]:hover {
+        background: rgba(0, 245, 255, 0.1);
+        border: 1px solid rgba(0, 245, 255, 0.5);
+        box-shadow: 0 0 15px rgba(0, 245, 255, 0.3);
+    }
+    
+    .stTabs [aria-selected="true"] {
+        background: linear-gradient(135deg, rgba(0, 245, 255, 0.2), rgba(255, 0, 255, 0.2));
+        border: 1px solid #00F5FF;
+        box-shadow: 0 0 25px rgba(0, 245, 255, 0.6), inset 0 0 15px rgba(255, 0, 255, 0.3);
+        color: white !important;
+    }
+    
+    /* Futuristic textarea */
+    textarea {
+        background: rgba(15, 12, 41, 0.7) !important;
+        backdrop-filter: blur(10px) !important;
+        border: 2px solid rgba(0, 245, 255, 0.3) !important;
+        border-radius: 15px !important;
+        color: #E0E0E0 !important;
+        font-family: 'Courier New', monospace !important;
+        font-size: 0.95rem !important;
+        transition: all 0.3s ease !important;
+    }
+    
+    textarea:focus {
+        border: 2px solid #00F5FF !important;
+        box-shadow: 0 0 20px rgba(0, 245, 255, 0.5) !important;
+        background: rgba(15, 12, 41, 0.9) !important;
+    }
+    
+    textarea::placeholder {
+        color: rgba(255, 255, 255, 0.4) !important;
+    }
+    
+    /* Neon buttons */
+    .stButton > button {
+        background: linear-gradient(135deg, rgba(0, 245, 255, 0.2), rgba(255, 0, 255, 0.2));
+        backdrop-filter: blur(15px);
+        color: white;
+        border: 2px solid #00F5FF;
+        border-radius: 15px;
+        padding: 1rem 2.5rem;
+        font-size: 1.2rem;
+        font-weight: 700;
+        letter-spacing: 1px;
+        box-shadow: 0 0 30px rgba(0, 245, 255, 0.6), inset 0 0 20px rgba(255, 0, 255, 0.2);
+        transition: all 0.4s ease;
+        text-transform: uppercase;
+    }
+    
+    .stButton > button:hover {
+        transform: translateY(-3px) scale(1.05);
+        box-shadow: 0 0 50px rgba(0, 245, 255, 0.9), 0 0 100px rgba(255, 0, 255, 0.5);
+        border-color: #FF00FF;
+        background: linear-gradient(135deg, rgba(255, 0, 255, 0.3), rgba(0, 245, 255, 0.3));
+    }
+    
+    /* Holographic metrics */
+    [data-testid="stMetricValue"] {
+        font-size: 3rem !important;
+        font-weight: 900 !important;
+        background: linear-gradient(135deg, #00F5FF, #FF00FF);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        filter: drop-shadow(0 0 15px rgba(0, 245, 255, 0.7));
     }
     
     [data-testid="stMetricLabel"] {
-        font-size: 1rem !important;
+        font-size: 0.95rem !important;
         font-weight: 600 !important;
-        color: #666 !important;
+        color: rgba(255, 255, 255, 0.7) !important;
+        text-transform: uppercase;
+        letter-spacing: 1px;
     }
     
-    /* Expander stilleri */
+    /* Glass expander */
     .streamlit-expanderHeader {
-        background-color: #f8f9fa;
-        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+        border-radius: 12px;
+        border: 1px solid rgba(0, 245, 255, 0.2);
         font-weight: 600;
-        color: #667eea;
+        color: #00F5FF !important;
+        transition: all 0.3s ease;
     }
     
-    /* Divider stilleri */
+    .streamlit-expanderHeader:hover {
+        background: rgba(0, 245, 255, 0.1);
+        box-shadow: 0 0 15px rgba(0, 245, 255, 0.3);
+    }
+    
+    /* Cyber divider */
     hr {
-        margin: 2rem 0 !important;
+        margin: 2.5rem 0 !important;
         border: none !important;
         height: 2px !important;
-        background: linear-gradient(90deg, transparent, #667eea, transparent) !important;
+        background: linear-gradient(90deg, 
+            transparent, 
+            rgba(0, 245, 255, 0.5) 20%, 
+            rgba(255, 0, 255, 0.5) 50%, 
+            rgba(0, 245, 255, 0.5) 80%, 
+            transparent
+        ) !important;
+        box-shadow: 0 0 10px rgba(0, 245, 255, 0.5);
     }
     
-    /* Success/Warning/Error mesaj stilleri */
+    /* Alert messages */
     .stSuccess, .stWarning, .stError {
-        border-radius: 10px !important;
+        background: rgba(255, 255, 255, 0.08) !important;
+        backdrop-filter: blur(15px) !important;
+        border-radius: 12px !important;
+        border-left: 4px solid #00F5FF !important;
         padding: 1rem !important;
     }
     
-    /* Input field stilleri */
+    /* Input fields */
     input {
-        border-radius: 8px !important;
-        border: 2px solid #e0e0e0 !important;
+        background: rgba(15, 12, 41, 0.7) !important;
+        backdrop-filter: blur(10px) !important;
+        border: 2px solid rgba(0, 245, 255, 0.3) !important;
+        border-radius: 12px !important;
+        color: #E0E0E0 !important;
+        transition: all 0.3s ease !important;
     }
     
     input:focus {
-        border-color: #667eea !important;
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
+        border-color: #00F5FF !important;
+        box-shadow: 0 0 15px rgba(0, 245, 255, 0.5) !important;
     }
     
-    /* Spinner stilleri */
+    /* Floating particles background effect */
+    .main::before {
+        content: '';
+        position: fixed;
+        width: 100%;
+        height: 100%;
+        top: 0;
+        left: 0;
+        background-image: 
+            radial-gradient(circle at 20% 50%, rgba(0, 245, 255, 0.1) 0%, transparent 50%),
+            radial-gradient(circle at 80% 80%, rgba(255, 0, 255, 0.1) 0%, transparent 50%),
+            radial-gradient(circle at 40% 20%, rgba(0, 245, 255, 0.08) 0%, transparent 50%);
+        pointer-events: none;
+        z-index: -1;
+    }
+    
+    /* Text colors */
+    p, span, label {
+        color: rgba(255, 255, 255, 0.85) !important;
+    }
+    
+    /* Spinner */
     .stSpinner > div {
-        border-top-color: #667eea !important;
+        border-top-color: #00F5FF !important;
+        filter: drop-shadow(0 0 10px rgba(0, 245, 255, 0.8));
     }
     </style>
     """, unsafe_allow_html=True)
 
 # --- Sayfa Ayarları ---
 st.set_page_config(
-    page_title="AI Powered CV Matching",
-    page_icon="🤖",
+    page_title="AI CV Matcher | Quantum Edition",
+    page_icon="⚡",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
-# Custom CSS'i yükle
 load_custom_css()
 
 # --- 1. FIREBASE BAĞLANTISI ---
@@ -191,11 +297,13 @@ def init_gemini():
         st.error(f"💎 GEMİNİ BAŞLATMA HATASI: {e}")
         st.stop()
 
-# --- UYGULAMA BAŞLANGICI ---
+# --- HEADER ---
 st.markdown("""
-<div style='text-align: center; padding: 1rem 0 2rem 0;'>
-    <h1 style='margin-bottom: 0.5rem;'>🤖 AI CV Matching Platform</h1>
-    <p style='color: white; font-size: 1.2rem; font-weight: 300;'>Powered by Google Gemini AI & Firebase</p>
+<div style='text-align: center; padding: 3rem 0 2rem 0;'>
+    <h1>⚡ QUANTUM CV MATCHER</h1>
+    <p style='color: rgba(255, 255, 255, 0.7); font-size: 1.3rem; font-weight: 300; letter-spacing: 3px;'>
+        POWERED BY GEMINI AI • NEURAL NETWORK MATCHING
+    </p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -203,10 +311,10 @@ try:
     db = init_firebase()
     gemini_model, embedding_model = init_gemini()
 except Exception as e:
-    st.error("Uygulama başlatılırken kritik bir hata oluştu. Lütfen 'Secrets' ayarlarınızı kontrol edin.")
+    st.error("⚠️ System initialization failed. Check your credentials.")
     st.stop()
 
-# --- YARDIMCI FONKSİYONLAR ---
+# --- HELPER FUNCTIONS (unchanged) ---
 @st.cache_data(ttl=300) 
 def get_job_postings_with_vectors():
     jobs = []
@@ -234,10 +342,7 @@ def extract_score_from_text(text):
 
 def get_gemini_analysis(cv, job_post):
     prompt = f"""
-    You are a senior Human Resources (HR) specialist... (Prompt metni aynı)
-    ...
-    1.  **Overall Compatibility Score:** Rate the CV's suitability... on a scale of 100.
-    ...
+    You are a senior Human Resources (HR) specialist...
     ---[CV TEXT]----
     {cv}
     -----------------
@@ -262,53 +367,47 @@ def get_embedding(text):
         )
         return result['embedding']
     except Exception as e:
-        st.error(f"Metnin 'parmak izi' alınırken hata oluştu: {e}")
+        st.error(f"Embedding error: {e}")
         return None
 
-# --- ANA UYGULAMA ARAYÜZÜ ---
-tab1, tab2 = st.tabs(["🎯 Auto-Matcher: Find Jobs for Me", "➕ Add New Job Posting"])
+# --- MAIN UI ---
+tab1, tab2 = st.tabs(["🎯 NEURAL MATCHER", "⚡ ADD JOB POSTING"])
 
-# --- Sekme 1: OTOMATİK CV EŞLEŞTİRİCİ ---
+# --- TAB 1: CV MATCHER ---
 with tab1:
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # Hero section
-    col_hero1, col_hero2, col_hero3 = st.columns([1, 2, 1])
-    with col_hero2:
+    with st.container(border=True):
         st.markdown("""
-        <div style='text-align: center; padding: 1.5rem; background: white; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);'>
-            <h2 style='color: #667eea; margin-top: 0;'>🚀 Discover Your Perfect Job Match</h2>
-            <p style='color: #666; font-size: 1.1rem; line-height: 1.6;'>
-                Paste your CV below and let our advanced AI analyze it against thousands of job postings 
-                to find your top 3 most compatible opportunities.
+        <div style='text-align: center; margin-bottom: 2rem;'>
+            <h2 style='margin-bottom: 1rem;'>🧠 NEURAL NETWORK CV ANALYSIS</h2>
+            <p style='color: rgba(255,255,255,0.7); font-size: 1.1rem; line-height: 1.8;'>
+                Our AI scans <span style='color: #00F5FF; font-weight: 700;'>1000+ job postings</span> 
+                in <span style='color: #FF00FF; font-weight: 700;'>milliseconds</span> to find your perfect match
             </p>
         </div>
         """, unsafe_allow_html=True)
-    
-    st.markdown("<br>", unsafe_allow_html=True)
-    
-    with st.container(border=True):
-        st.markdown("**📄 Your CV Text**")
+        
         cv_text = st.text_area(
-            "Paste your full CV here", 
-            height=350, 
+            "CV_INPUT", 
+            height=320, 
             label_visibility="collapsed",
-            placeholder="Paste your complete CV text here (education, experience, skills, etc.)..."
+            placeholder=">>> PASTE YOUR COMPLETE CV HERE\n\n[EDUCATION] [EXPERIENCE] [SKILLS] [PROJECTS]..."
         )
     
     st.markdown("<br>", unsafe_allow_html=True)
     
-    col_btn1, col_btn2, col_btn3 = st.columns([1, 1, 1])
-    with col_btn2:
-        search_button = st.button("🔍 Find My Perfect Matches", type="primary", use_container_width=True)
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        analyze_btn = st.button("⚡ INITIATE QUANTUM SCAN", type="primary", use_container_width=True)
     
-    if search_button:
+    if analyze_btn:
         if cv_text:
-            with st.spinner("🤖 AI is analyzing your CV and searching our database..."):
+            with st.spinner("🔮 Quantum processors analyzing your profile..."):
                 all_jobs = get_job_postings_with_vectors()
                 
                 if not all_jobs:
-                    st.warning("⚠️ No job postings found. Please add jobs in the 'Add New Job' tab first.")
+                    st.warning("⚠️ Database empty. Add jobs in 'ADD JOB POSTING' tab.")
                     st.stop()
                 
                 cv_vector = get_embedding(cv_text)
@@ -319,16 +418,21 @@ with tab1:
                     similarities = np.dot(job_vectors, cv_vector_np)
                     
                     top_indices = np.argsort(similarities)[-3:][::-1]
-                    top_scores = [similarities[i] for i in top_indices]
 
-                    st.success(f"✅ Found {len(top_indices)} excellent matches! Analyzing compatibility now...")
+                    st.success("✅ Neural scan complete! Top matches identified.")
                     st.markdown("<br>", unsafe_allow_html=True)
                     
-                    # Sonuçlar için özel header
                     st.markdown("""
-                    <div style='text-align: center; padding: 1rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                                border-radius: 10px; margin-bottom: 2rem;'>
-                        <h3 style='color: white; margin: 0;'>🎯 Your Top 3 Job Matches</h3>
+                    <div style='text-align: center; padding: 1.5rem; 
+                                background: rgba(0, 245, 255, 0.1); 
+                                backdrop-filter: blur(15px);
+                                border: 2px solid rgba(0, 245, 255, 0.3);
+                                border-radius: 15px; 
+                                margin-bottom: 2.5rem;
+                                box-shadow: 0 0 30px rgba(0, 245, 255, 0.3);'>
+                        <h2 style='margin: 0; color: white; text-shadow: 0 0 20px rgba(0, 245, 255, 0.8);'>
+                            🎯 TOP 3 QUANTUM MATCHES
+                        </h2>
                     </div>
                     """, unsafe_allow_html=True)
                     
@@ -338,119 +442,135 @@ with tab1:
                         
                         analysis_text, score = get_gemini_analysis(cv_text, matched_job['description'])
                         
-                        # Renge göre emoji ve renk seçimi
+                        # Score-based styling
                         if score and score >= 80:
-                            emoji = "🌟"
-                            color = "#10b981"
+                            icon = "🔥"
+                            color = "#00F5FF"
+                            glow = "rgba(0, 245, 255, 0.6)"
                         elif score and score >= 60:
-                            emoji = "⭐"
-                            color = "#f59e0b"
+                            icon = "⚡"
+                            color = "#FF00FF"
+                            glow = "rgba(255, 0, 255, 0.6)"
                         else:
-                            emoji = "💡"
-                            color = "#6b7280"
+                            icon = "💫"
+                            color = "#7B68EE"
+                            glow = "rgba(123, 104, 238, 0.6)"
                         
                         with st.container(border=True):
-                            # Üst kısım: Rank badge + Başlık
                             st.markdown(f"""
-                            <div style='display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;'>
-                                <div style='background: {color}; color: white; padding: 0.5rem 1rem; 
-                                            border-radius: 20px; font-weight: 700; font-size: 1rem;'>
-                                    {emoji} Rank #{rank}
+                            <div style='margin-bottom: 1.5rem;'>
+                                <div style='display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;'>
+                                    <div style='background: {color}; 
+                                                color: black; 
+                                                padding: 0.6rem 1.2rem; 
+                                                border-radius: 25px; 
+                                                font-weight: 900; 
+                                                font-size: 1.1rem;
+                                                box-shadow: 0 0 20px {glow};'>
+                                        {icon} RANK #{rank}
+                                    </div>
                                 </div>
-                                <h3 style='margin: 0; color: #1f2937;'>{matched_job['title']}</h3>
+                                <h3 style='margin: 0; color: white; font-size: 1.5rem;'>
+                                    {matched_job['title']}
+                                </h3>
                             </div>
                             """, unsafe_allow_html=True)
                             
-                            col1, col2 = st.columns([0.25, 0.75])
+                            col_a, col_b = st.columns([0.3, 0.7])
                             
-                            with col1:
+                            with col_a:
                                 st.metric(
-                                    label="Match Score",
+                                    label="COMPATIBILITY",
                                     value=f"{score}%" if score else "N/A",
-                                    help="AI-generated compatibility (0-100%)"
+                                    help="AI Neural Network Score"
                                 )
                             
-                            with col2:
-                                with st.expander("📊 View Detailed AI Analysis", expanded=False):
+                            with col_b:
+                                with st.expander("🔬 DETAILED ANALYSIS", expanded=False):
                                     st.markdown(analysis_text)
                         
                         if i < len(top_indices) - 1:
                             st.markdown("<br>", unsafe_allow_html=True)
         else:
-            st.warning("⚠️ Please paste your CV text to start matching.")
+            st.warning("⚠️ CV input required to initiate scan")
 
-# --- Sekme 2: YENİ İLAN EKLEME ---
+# --- TAB 2: ADD JOB ---
 with tab2:
     st.markdown("<br>", unsafe_allow_html=True)
     
-    col_hero1, col_hero2, col_hero3 = st.columns([1, 2, 1])
-    with col_hero2:
+    with st.container(border=True):
         st.markdown("""
-        <div style='text-align: center; padding: 1.5rem; background: white; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);'>
-            <h2 style='color: #667eea; margin-top: 0;'>➕ Add New Job to Database</h2>
-            <p style='color: #666; font-size: 1.1rem; line-height: 1.6;'>
-                When you save a job posting, our AI automatically generates its semantic fingerprint 
-                for intelligent matching with future candidates.
+        <div style='text-align: center; margin-bottom: 2rem;'>
+            <h2>⚡ REGISTER NEW JOB POSTING</h2>
+            <p style='color: rgba(255,255,255,0.7); font-size: 1.1rem;'>
+                AI will auto-generate semantic embeddings for intelligent matching
             </p>
         </div>
         """, unsafe_allow_html=True)
-    
-    st.markdown("<br>", unsafe_allow_html=True)
-    
-    with st.form("new_job_form", clear_on_submit=True):
-        with st.container(border=True):
-            st.markdown("**📌 Job Title**")
+        
+        with st.form("job_form", clear_on_submit=True):
+            st.markdown("**📍 JOB TITLE**")
             job_title = st.text_input(
-                "Enter the job title", 
+                "title", 
                 label_visibility="collapsed",
-                placeholder="e.g., Senior Software Engineer, Data Scientist, Product Manager..."
+                placeholder="e.g., Senior Full-Stack Engineer | AI Research Scientist"
+            )
+            
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown("**📋 FULL JOB DESCRIPTION**")
+            job_description = st.text_area(
+                "desc", 
+                height=320, 
+                label_visibility="collapsed",
+                placeholder=">>> PASTE COMPLETE JOB DESCRIPTION\n\n[RESPONSIBILITIES] [REQUIREMENTS] [QUALIFICATIONS]..."
             )
             
             st.markdown("<br>", unsafe_allow_html=True)
             
-            st.markdown("**📝 Job Description**")
-            job_description = st.text_area(
-                "Enter the full job description", 
-                height=350, 
-                label_visibility="collapsed",
-                placeholder="Paste the complete job description including responsibilities, requirements, qualifications, etc."
-            )
-        
-        st.markdown("<br>", unsafe_allow_html=True)
-        
-        col_submit1, col_submit2, col_submit3 = st.columns([1, 1, 1])
-        with col_submit2:
-            submitted = st.form_submit_button("💾 Save Job & Generate AI Fingerprint", use_container_width=True)
-        
-        if submitted:
-            if job_title and job_description:
-                with st.spinner("🧠 Generating AI fingerprint (vector) for this job..."):
-                    job_vector = get_embedding(f"Title: {job_title}\n\nDescription: {job_description}")
-                
-                if job_vector:
-                    try:
-                        doc_ref = db.collection("job_postings").document()
-                        doc_ref.set({
-                            "title": job_title,
-                            "description": job_description,
-                            "created_at": firestore.SERVER_TIMESTAMP,
-                            "vector": job_vector
-                        })
-                        st.success(f"✅ Successfully added '{job_title}' with AI fingerprint to database!")
-                        st.balloons()
-                        st.cache_data.clear()
-                    except Exception as e:
-                        st.error(f"❌ Error saving to Firebase: {e}")
+            col1, col2, col3 = st.columns([1, 2, 1])
+            with col2:
+                submit = st.form_submit_button("💾 SAVE & GENERATE EMBEDDINGS", use_container_width=True)
+            
+            if submit:
+                if job_title and job_description:
+                    with st.spinner("🧬 Generating neural embeddings..."):
+                        job_vector = get_embedding(f"Title: {job_title}\n\nDescription: {job_description}")
+                    
+                    if job_vector:
+                        try:
+                            doc_ref = db.collection("job_postings").document()
+                            doc_ref.set({
+                                "title": job_title,
+                                "description": job_description,
+                                "created_at": firestore.SERVER_TIMESTAMP,
+                                "vector": job_vector
+                            })
+                            st.success(f"✅ '{job_title}' registered in neural database!")
+                            st.balloons()
+                            st.cache_data.clear()
+                        except Exception as e:
+                            st.error(f"❌ Database error: {e}")
+                    else:
+                        st.error("❌ Embedding generation failed")
                 else:
-                    st.error("❌ Could not generate AI fingerprint. Job not saved.")
-            else:
-                st.warning("⚠️ Please fill in both Job Title and Job Description.")
+                    st.warning("⚠️ Both fields required")
 
-# Footer
-st.markdown("<br><br>", unsafe_allow_html=True)
+# --- FOOTER ---
+st.markdown("<br><br><br>", unsafe_allow_html=True)
 st.markdown("""
-<div style='text-align: center; color: white; padding: 2rem; font-size: 0.9rem;'>
-    <p>Built with ❤️ using Streamlit, Google Gemini AI & Firebase</p>
-    <p style='opacity: 0.8;'>v2.5 - Visual Edition</p>
+<div style='text-align: center; 
+            padding: 2rem; 
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(15px);
+            border-radius: 15px;
+            border: 1px solid rgba(0, 245, 255, 0.2);
+            margin-top: 3rem;'>
+    <p style='color: rgba(255,255,255,0.8); font-size: 1rem; margin: 0;'>
+        POWERED BY <span style='color: #00F5FF; font-weight: 700;'>GOOGLE GEMINI AI</span> 
+        × <span style='color: #FF00FF; font-weight: 700;'>FIREBASE QUANTUM DB</span>
+    </p>
+    <p style='color: rgba(255,255,255,0.5); font-size: 0.85rem; margin-top: 0.5rem;'>
+        QUANTUM EDITION v3.0 | NEURAL NETWORK ARCHITECTURE
+    </p>
 </div>
 """, unsafe_allow_html=True)
