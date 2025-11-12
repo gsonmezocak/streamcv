@@ -21,8 +21,8 @@ except Exception as e:
     st.stop() # Hata varsa uygulamayı durdur
 
 # --- Gemini Modelini Ayarlama ---
-# gemini-1.5-flash en hızlı ve maliyet-etkin modellerden biridir.
-model = genai.GenerativeModel('gemini-1.5-flash')
+# Az önce listelediğimiz ve çalıştığı kanıtlanan model adını buraya yazıyoruz.
+model = genai.GenerativeModel('models/gemini-pro-latest') # <-- DÜZELTİLDİ
 
 # --- Prompt (AI'a Vereceğimiz Komut) Tasarımı ---
 def create_prompt(cv, ilan):
