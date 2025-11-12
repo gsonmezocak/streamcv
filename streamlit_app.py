@@ -22,7 +22,7 @@ except Exception as e:
 
 # --- Gemini Modelini Ayarlama ---
 # Az önce listelediğimiz ve çalıştığı kanıtlanan model adını buraya yazıyoruz.
-model = genai.GenerativeModel('models/gemini-pro-latest') # <-- DÜZELTİLDİ
+model = genai.GenerativeModel('models/gemini-flash-latest') # <-- DÜZELTİLDİ
 
 # --- Prompt (AI'a Vereceğimiz Komut) Tasarımı ---
 def create_prompt(cv, ilan):
