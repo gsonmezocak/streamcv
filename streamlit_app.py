@@ -439,7 +439,6 @@ def get_gemini_analysis(cv, job_post):
     """
     try:
         response = gemini_model.generate_content(prompt)
-        clean_json_text = re.sub(r"^```
         clean_json_text = re.sub(r"\n```$", "", clean_json_text).strip()
         analysis_data = json.loads(clean_json_text)
         return analysis_data
