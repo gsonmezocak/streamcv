@@ -5,24 +5,23 @@ import time
 # --- Page Setup ---
 st.set_page_config(
     page_title="AI Powered CV Matching",
-    page_icon="🤖"
+    page_icon="🤖",
+    layout="wide"  # Sayfayı genişletiyoruz
 )
 
-# --- Title and Description ---
-st.title("🤖 AI Powered CV - Job Posting Matcher (MVP)")
-st.markdown("This application analyzes the compatibility between a CV and a job posting using.")
+# --- Title ---
+st.title("🤖 AI Powered CV - Job Posting Matcher")
+st.markdown("This application analyzes the compatibility between a CV and a job posting using Gemini AI.")
 
 # --- API Key Authentication ---
-# Securely fetching the API key using Streamlit's secrets feature.
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 except Exception as e:
     st.error("API Key not found or invalid. Please check your secrets.toml file.")
-    st.stop() # Stop the app if there's an error
+    st.stop()
 
 # --- Configure Gemini Model ---
-# We are using the 'flash' model which is optimized for speed.
-model = genai.GenerativeModel('models/gemini-flash-latest') # <-- FAST MODEL
+model = genai.GenerativeModel('models/gemini-flash-latest') # Hızlı model
 
 # --- Prompt Design ---
 def create_prompt(cv, job_post):
@@ -48,32 +47,33 @@ def create_prompt(cv, job_post):
     """
 
 # --- User Interface (UI) ---
+# Konteynerler kullanarak arayüzü "kartlara" bölüyoruz.
 col1, col2 = st.columns(2)
 
 with col1:
-    st.subheader("📄 CV Text")
-    cv_text = st.text_area("Paste the candidate's CV text here", height=300, label_visibility="collapsed")
+    with st.container(border=True):
+        st.subheader("📄 Paste CV Text Below")
+        cv_text = st.text_area("CV Text", height=350, label_visibility="collapsed")
 
 with col2:
-    st.subheader("🎯 Job Posting Text")
-    ilan_text = st.text_area("Paste the job posting text here", height=300, label_visibility="collapsed")
+    with st.container(border=True):
+        st.subheader("🎯 Paste Job Posting Text Below")
+        ilan_text = st.text_area("Job Posting Text", height=350, label_visibility="collapsed")
 
 # --- Button and Logic ---
 if st.button("Run Compatibility Analysis", type="primary", use_container_width=True):
     if cv_text and ilan_text:
-        # Show a loading spinner while processing
-        with st.spinner("We are analyzing the CV and job post... Please wait."):
+        with st.spinner("Gemini AI is analyzing... Please wait."):
             try:
-                # Create the prompt
+                # Prompt'u oluştur
                 prompt = create_prompt(cv_text, ilan_text)
                 
-                # Send the request to Gemini API
+                # Gemini API'a isteği gönder
                 response = model.generate_content(prompt)
                 
-                # Print the result
-                st.divider()
-                st.subheader("✨ Analysis Result")
-                st.markdown(response.text)
+                # Sonucu bir "expander" (açılır-kapanır) bölüm içinde göster
+                with st.expander("✨ Click to See Analysis Result", expanded=True):
+                    st.markdown(response.text)
                 
             except Exception as e:
                 st.error(f"An error occurred during analysis: {e}")
