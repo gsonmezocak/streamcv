@@ -4,14 +4,14 @@ import time
 
 # --- Page Setup ---
 st.set_page_config(
-    page_title="AI Powered CV Matching",
+    page_title="AI CV - Internship Matching",
     page_icon="🤖",
     layout="wide"  # Sayfayı genişletiyoruz
 )
 
 # --- Title ---
 st.title("🤖 AI Powered CV - Job Posting Matcher")
-st.markdown("This application analyzes the compatibility between a CV and a job posting using Gemini AI.")
+st.markdown("This application analyzes the compatibility between a CV and a job posting.")
 
 # --- API Key Authentication ---
 try:
@@ -63,7 +63,7 @@ with col2:
 # --- Button and Logic ---
 if st.button("Run Compatibility Analysis", type="primary", use_container_width=True):
     if cv_text and ilan_text:
-        with st.spinner("Gemini AI is analyzing... Please wait."):
+        with st.spinner("We are analyzing... Please wait."):
             try:
                 # Prompt'u oluştur
                 prompt = create_prompt(cv_text, ilan_text)
