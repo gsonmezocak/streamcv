@@ -1,7 +1,7 @@
 import streamlit as st
 import google.generativeai as genai
 import firebase_admin
-from firebase_admin import credentials, firestore, auth
+from firebase_admin import credentials, firestore, auth # (YENİ) auth'u buraya ekledik
 import json
 import numpy as np
 import re
@@ -38,7 +38,7 @@ def init_firebase_auth():
             "authDomain": f"{st.secrets['firebase_credentials']['project_id']}.firebaseapp.com",
             "projectId": st.secrets['firebase_credentials']['project_id'],
             "storageBucket": f"{st.secrets['firebase_credentials']['project_id']}.appspot.com",
-            "databaseURL": f"https{st.secrets['firebase_credentials']['project_id']}-default-rtdb.firebaseio.com",
+            "databaseURL": f"https://{st.secrets['firebase_credentials']['project_id']}-default-rtdb.firebaseio.com",
         }
         firebase = pyrebase.initialize_app(firebase_config)
         return firebase.auth()
@@ -70,20 +70,23 @@ except Exception as e:
 # --- OTURUM YÖNETİMİ (Session State) ---
 if 'user_email' not in st.session_state:
     st.session_state['user_email'] = None
-if 'user_token' not in st.session_state:
+if 'user_token' not st.session_state:
     st.session_state['user_token'] = None
 
 # --- YARDIMCI FONKSİYONLAR ---
 
+# (YENİ) Dashboard için İstatistik Fonksiyonları
 @st.cache_data(ttl=300) # 5 dakika önbellek
 def get_platform_stats():
     """
     Dashboard'da gösterilecek temel istatistikleri çeker.
     """
     try:
+        # 1. Toplam İlan Sayısı
         job_docs = db.collection("job_postings").stream()
         total_jobs = sum(1 for _ in job_docs)
         
+        # 2. Toplam Profil Sayısı (CV'sini kaydeden)
         profile_docs = db.collection("user_profiles").stream()
         total_profiles = sum(1 for _ in profile_docs)
         
@@ -92,12 +95,13 @@ def get_platform_stats():
         st.error(f"İstatistikler çekilirken hata: {e}")
         return 0, 0
 
-@st.cache_data(ttl=3600) # 1 saat önbellek
+@st.cache_data(ttl=3600) # 1 saat önbellek (bu yavaş bir işlemdir)
 def get_total_user_count():
     """
     Firebase Authentication'daki toplam kayıtlı kullanıcı sayısını çeker.
     """
     try:
+        # Bu, tüm kullanıcıları listeler
         page = auth.list_users()
         all_users = list(page.iterate_all())
         return len(all_users)
@@ -105,6 +109,7 @@ def get_total_user_count():
         st.error(f"Toplam kullanıcı sayısı çekilirken hata: {e}")
         return 0
 
+# (Diğer yardımcı fonksiyonlar... Değişiklik yok)
 @st.cache_data(ttl=300) 
 def get_job_postings_with_vectors():
     jobs = []
@@ -170,12 +175,13 @@ def get_user_cv(user_id):
         st.error(f"Profilinizden CV'niz çekilirken hata oluştu: {e}")
         return ""
 
-# --- ANA UYGULAMA FONKSİYONU (Dashboard'u içeriyor) ---
+# --- ANA UYGULAMA FONKSİYONU (GÜNCELLENDİ) ---
 def main_app():
     
+    # --- Üst Bar: Kullanıcı bilgisi ve Çıkış Butonu ---
     col1, col2 = st.columns([0.8, 0.2])
     with col1:
-        st.title("🤖 AI CV Matching Platform")
+        st.title("🤖 AI CV Matching Platform (v3.2 - Dashboard)")
     with col2:
         st.write(f"Logged in as: `{st.session_state['user_email']}`")
         if st.button("Logout", use_container_width=True):
@@ -185,28 +191,34 @@ def main_app():
             
     st.markdown("---") 
 
-    # --- Dashboard Metrikleri ---
+    # --- (YENİ) Dashboard Metrikleri ---
     with st.spinner("Loading platform stats..."):
         total_jobs, total_profiles = get_platform_stats()
         total_users = get_total_user_count()
     
     stat_col1, stat_col2, stat_col3 = st.columns(3)
+    
     with stat_col1:
         st.metric(label="👥 Total Registered Users", value=total_users)
+    
     with stat_col2:
         st.metric(label="🎯 Total Jobs in Pool", value=total_jobs)
+    
     with stat_col3:
         st.metric(label="👤 Saved CV Profiles", value=total_profiles, help="Number of users who have saved their CV.")
 
     st.markdown("---")
     
+    # (Devamı...)
     user_id = auth_client.get_account_info(st.session_state['user_token'])['users'][0]['localId']
 
     tab1, tab2, tab3 = st.tabs(["🚀 Auto-Matcher", "📝 Add New Job Posting", "👤 My Profile"])
 
-    # (Sekme 1)
+    # (Sekme 1: Auto-Matcher. Değişiklik yok)
     with tab1:
         st.header("Find the Best Jobs for Your CV")
+        st.markdown("We will use the CV saved in your 'My Profile' tab. If it's empty, please paste your CV below.")
+        
         saved_cv = get_user_cv(user_id)
         
         with st.container(border=True):
@@ -247,7 +259,7 @@ def main_app():
             else:
                 st.warning("Please paste your CV text to find matches.")
 
-    # (Sekme 2)
+    # (Sekme 2: İlan Ekleme. Değişiklik yok)
     with tab2:
         st.header("Add a New Job Posting to the Database")
         with st.form("new_job_form", clear_on_submit=True):
@@ -274,7 +286,7 @@ def main_app():
                     else: st.error("Could not generate AI fingerprint.")
                 else: st.warning("Please fill in both fields.")
 
-    # (Sekfme 3)
+    # (Sekme 3: Profilim. Değişiklik yok)
     with tab3:
         st.header("My Profile")
         st.markdown("Save your CV here so you don't have to paste it every time.")
@@ -303,29 +315,10 @@ def main_app():
                 except Exception as e:
                     st.error(f"An error occurred while saving your profile: {e}")
 
-# --- LOGIN SAYFASI FONKSİYONU (Dashboard'u içeriyor) ---
+# --- LOGIN SAYFASI FONKSİYONU (Dostça Hatalar) ---
 def login_page():
     st.title("🤖 AI CV Matching Platform")
     
-    st.markdown("Welcome! Log in or sign up to find your perfect job match.")
-    st.markdown("---")
-
-    # --- Login Sayfasına İstatistikleri Ekleme ---
-    with st.spinner("Loading platform stats..."):
-        total_jobs, total_profiles = get_platform_stats()
-        total_users = get_total_user_count()
-    
-    stat_col1, stat_col2, stat_col3 = st.columns(3)
-    with stat_col1:
-        st.metric(label="👥 Total Registered Users", value=total_users)
-    with stat_col2:
-        st.metric(label="🎯 Total Jobs in Pool", value=total_jobs)
-    with stat_col3:
-        st.metric(label="👤 Saved CV Profiles", value=total_profiles)
-
-    st.markdown("---")
-    
-    # (Devamı)
     login_tab, signup_tab = st.tabs(["Login", "Sign Up"])
     
     with login_tab:
