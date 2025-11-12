@@ -54,11 +54,22 @@ def init_gemini():
         st.stop()
 
 # --- UYGULAMA BAŞLANGICI ---
+st.title("🤖 AI CV Matching Platform (v1 - Firebase)")
+
+# 1. Firebase'i başlatmayı dene
 try:
     db = init_firebase()
+except Exception as e:
+    st.error(f"🔥 FİREBASE BAŞLATMA HATASI: {e}")
+    st.error("Lütfen Streamlit Secrets'taki 'FIREBASE_CREDENTIALS' anahtarınızın ADINI ve İÇERİĞİNİ (üçlü tırnaklar dahil) kontrol edin.")
+    st.stop()
+
+# 2. Gemini'yi başlatmayı dene
+try:
     gemini_model = init_gemini()
 except Exception as e:
-    st.error("Uygulama başlatılırken kritik bir hata oluştu. Secrets (Gizli Değişkenler) ayarlarınızı kontrol edin.")
+    st.error(f"💎 GEMİNİ BAŞLATMA HATASI: {e}")
+    st.error("Lütfen Streamlit Secrets'taki 'GEMINI_API_KEY' anahtarınızın ADINI kontrol edin.")
     st.stop()
 
 
