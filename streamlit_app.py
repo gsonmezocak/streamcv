@@ -1,11 +1,11 @@
 import streamlit as st
 import google.generativeai as genai
 import firebase_admin
-from firebase_admin import credentials, firestore, auth # (YENİ) auth'u buraya ekledik
+from firebase_admin import credentials, firestore, auth
 import json
 import numpy as np
 import re
-import pyrebase 
+import pyrebase # (YENİ) Kullanıcı girişi için
 
 # --- Sayfa Ayarları ---
 st.set_page_config(
@@ -23,7 +23,7 @@ def init_firebase_admin():
         creds = credentials.Certificate(creds_dict)
         firebase_admin.initialize_app(creds)
     except ValueError:
-        pass 
+        pass # Uygulama zaten başlatılmış
     except Exception as e:
         st.error(f"🔥 FİREBASE ADMİN HATASI: {e}")
         st.stop()
@@ -32,11 +32,14 @@ def init_firebase_admin():
 # --- 2. FIREBASE AUTH BAĞLANTISI (Login için) ---
 @st.cache_resource
 def init_firebase_auth():
+    """
+    Kullanıcı girişi için Pyrebase'i başlatır.
+    """
     try:
         firebase_config = {
             "apiKey": st.secrets["FIREBASE_WEB_API_KEY"],
             "authDomain": f"{st.secrets['firebase_credentials']['project_id']}.firebaseapp.com",
-            "projectId": st.secrets['firebase_credentials']['project_id'],
+            "projectId": st.secrets["firebase_credentials"]["project_id"],
             "storageBucket": f"{st.secrets['firebase_credentials']['project_id']}.appspot.com",
             "databaseURL": f"https://{st.secrets['firebase_credentials']['project_id']}-default-rtdb.firebaseio.com",
         }
@@ -44,6 +47,7 @@ def init_firebase_auth():
         return firebase.auth()
     except Exception as e:
         st.error(f"🔥 FİREBASE AUTH HATASI: {e}")
+        st.error("Lütfen Secrets'taki 'FIREBASE_WEB_API_KEY' ve 'firebase_credentials' ayarlarınızı kontrol edin.")
         st.stop()
 
 # --- 3. GEMINI AI BAĞLANTISI ---
@@ -70,54 +74,19 @@ except Exception as e:
 # --- OTURUM YÖNETİMİ (Session State) ---
 if 'user_email' not in st.session_state:
     st.session_state['user_email'] = None
-if 'user_token' not st.session_state:
+if 'user_token' not in st.session_state:
     st.session_state['user_token'] = None
 
-# --- YARDIMCI FONKSİYONLAR ---
-
-# (YENİ) Dashboard için İstatistik Fonksiyonları
-@st.cache_data(ttl=300) # 5 dakika önbellek
-def get_platform_stats():
-    """
-    Dashboard'da gösterilecek temel istatistikleri çeker.
-    """
-    try:
-        # 1. Toplam İlan Sayısı
-        job_docs = db.collection("job_postings").stream()
-        total_jobs = sum(1 for _ in job_docs)
-        
-        # 2. Toplam Profil Sayısı (CV'sini kaydeden)
-        profile_docs = db.collection("user_profiles").stream()
-        total_profiles = sum(1 for _ in profile_docs)
-        
-        return total_jobs, total_profiles
-    except Exception as e:
-        st.error(f"İstatistikler çekilirken hata: {e}")
-        return 0, 0
-
-@st.cache_data(ttl=3600) # 1 saat önbellek (bu yavaş bir işlemdir)
-def get_total_user_count():
-    """
-    Firebase Authentication'daki toplam kayıtlı kullanıcı sayısını çeker.
-    """
-    try:
-        # Bu, tüm kullanıcıları listeler
-        page = auth.list_users()
-        all_users = list(page.iterate_all())
-        return len(all_users)
-    except Exception as e:
-        st.error(f"Toplam kullanıcı sayısı çekilirken hata: {e}")
-        return 0
-
-# (Diğer yardımcı fonksiyonlar... Değişiklik yok)
+# --- YARDIMCI FONKSİYONLAR (Faz 2.5'ten itibaren) ---
 @st.cache_data(ttl=300) 
 def get_job_postings_with_vectors():
+    # ... (Bu fonksiyon Faz 2.5 ile aynı, değişiklik yok) ...
     jobs = []
     try:
         docs = db.collection("job_postings").stream()
         for doc in docs:
             job_data = doc.to_dict()
-            if 'vector' in job_data: 
+            if 'vector' in job_data: # Sadece vektörü olanları al
                 jobs.append({
                     "id": doc.id,
                     "title": job_data.get("title", "No Title"),
@@ -130,11 +99,13 @@ def get_job_postings_with_vectors():
         return []
 
 def extract_score_from_text(text):
+    # ... (Bu fonksiyon Faz 2.5 ile aynı, değişiklik yok) ...
     match = re.search(r"Overall Compatibility Score:.*?(\d{1,3})", text, re.IGNORECASE | re.DOTALL)
     if match: return int(match.group(1))
     return None
 
 def get_gemini_analysis(cv, job_post):
+    # ... (Bu fonksiyon Faz 2.5 ile aynı, değişiklik yok) ...
     prompt = f"""
     You are a senior Human Resources (HR) specialist...
     ...
@@ -154,6 +125,7 @@ def get_gemini_analysis(cv, job_post):
         return f"An error occurred during analysis: {e}", None
 
 def get_embedding(text):
+    # ... (Bu fonksiyon Faz 2.5 ile aynı, değişiklik yok) ...
     try:
         result = genai.embed_content(
             model="models/text-embedding-004",
@@ -165,6 +137,7 @@ def get_embedding(text):
         st.error(f"Metnin 'parmak izi' alınırken hata oluştu: {e}")
         return None
 
+# (YENİ) Profilden CV'yi getiren fonksiyon
 def get_user_cv(user_id):
     try:
         doc_ref = db.collection("user_profiles").document(user_id).get()
@@ -175,50 +148,31 @@ def get_user_cv(user_id):
         st.error(f"Profilinizden CV'niz çekilirken hata oluştu: {e}")
         return ""
 
-# --- ANA UYGULAMA FONKSİYONU (GÜNCELLENDİ) ---
+# --- ANA UYGULAMA FONKSİYONU ---
 def main_app():
     
     # --- Üst Bar: Kullanıcı bilgisi ve Çıkış Butonu ---
     col1, col2 = st.columns([0.8, 0.2])
     with col1:
-        st.title("🤖 AI CV Matching Platform (v3.2 - Dashboard)")
+        st.title("🤖 AI CV Matching Platform (v3 - Profile)")
     with col2:
         st.write(f"Logged in as: `{st.session_state['user_email']}`")
         if st.button("Logout", use_container_width=True):
             st.session_state['user_email'] = None
             st.session_state['user_token'] = None
-            st.rerun() 
-            
-    st.markdown("---") 
+            st.rerun() # Sayfayı yenile (login ekranına dönecek)
 
-    # --- (YENİ) Dashboard Metrikleri ---
-    with st.spinner("Loading platform stats..."):
-        total_jobs, total_profiles = get_platform_stats()
-        total_users = get_total_user_count()
-    
-    stat_col1, stat_col2, stat_col3 = st.columns(3)
-    
-    with stat_col1:
-        st.metric(label="👥 Total Registered Users", value=total_users)
-    
-    with stat_col2:
-        st.metric(label="🎯 Total Jobs in Pool", value=total_jobs)
-    
-    with stat_col3:
-        st.metric(label="👤 Saved CV Profiles", value=total_profiles, help="Number of users who have saved their CV.")
-
-    st.markdown("---")
-    
-    # (Devamı...)
+    # (YENİ) Kullanıcının kimliğini (ID) al
     user_id = auth_client.get_account_info(st.session_state['user_token'])['users'][0]['localId']
 
     tab1, tab2, tab3 = st.tabs(["🚀 Auto-Matcher", "📝 Add New Job Posting", "👤 My Profile"])
 
-    # (Sekme 1: Auto-Matcher. Değişiklik yok)
+    # --- Sekme 1: OTOMATİK CV EŞLEŞTİRİCİ (Güncellendi) ---
     with tab1:
         st.header("Find the Best Jobs for Your CV")
         st.markdown("We will use the CV saved in your 'My Profile' tab. If it's empty, please paste your CV below.")
         
+        # (YENİ) Önce profilden CV'yi çekmeyi dene
         saved_cv = get_user_cv(user_id)
         
         with st.container(border=True):
@@ -259,7 +213,7 @@ def main_app():
             else:
                 st.warning("Please paste your CV text to find matches.")
 
-    # (Sekme 2: İlan Ekleme. Değişiklik yok)
+    # --- Sekme 2: YENİ İLAN EKLEME (Değişiklik yok) ---
     with tab2:
         st.header("Add a New Job Posting to the Database")
         with st.form("new_job_form", clear_on_submit=True):
@@ -278,7 +232,7 @@ def main_app():
                                 "description": job_description,
                                 "created_at": firestore.SERVER_TIMESTAMP,
                                 "vector": job_vector,
-                                "added_by": st.session_state['user_email']
+                                "added_by": st.session_state['user_email'] # (YENİ) Kimin eklediğini kaydet
                             })
                             st.success(f"Successfully added '{job_title}'!")
                             st.cache_data.clear()
@@ -286,11 +240,12 @@ def main_app():
                     else: st.error("Could not generate AI fingerprint.")
                 else: st.warning("Please fill in both fields.")
 
-    # (Sekme 3: Profilim. Değişiklik yok)
+    # --- (YENİ) Sekme 3: PROFİLİM ---
     with tab3:
         st.header("My Profile")
         st.markdown("Save your CV here so you don't have to paste it every time.")
         
+        # Profilden mevcut CV'yi çek
         current_cv = get_user_cv(user_id)
         
         with st.form("profile_form"):
@@ -299,6 +254,7 @@ def main_app():
             
             if submitted:
                 try:
+                    # (YENİ) CV'yi ve parmak izini 'user_profiles' koleksiyonuna kaydet
                     with st.spinner("Generating AI fingerprint for your CV..."):
                         cv_vector = get_embedding(new_cv_text)
                     
@@ -308,14 +264,14 @@ def main_app():
                             "cv_text": new_cv_text,
                             "cv_vector": cv_vector,
                             "updated_at": firestore.SERVER_TIMESTAMP
-                        }, merge=True)
+                        }, merge=True) # merge=True, var olanı güncelle
                         st.success("Your CV has been successfully saved to your profile!")
                     else:
                         st.error("Could not generate AI fingerprint for your CV. Not saved.")
                 except Exception as e:
                     st.error(f"An error occurred while saving your profile: {e}")
 
-# --- LOGIN SAYFASI FONKSİYONU (Dostça Hatalar) ---
+# --- LOGIN SAYFASI FONKSİYONU ---
 def login_page():
     st.title("🤖 AI CV Matching Platform")
     
@@ -332,9 +288,10 @@ def login_page():
                     user = auth_client.sign_in_with_email_and_password(email, password)
                     st.session_state['user_email'] = user['email']
                     st.session_state['user_token'] = user['idToken']
-                    st.rerun() 
+                    st.rerun() # Sayfayı yenile (main_app'e gidecek)
                 except Exception as e:
-                    st.warning("Login failed. Please check your email and password.")
+                    st.error("Login failed. Check your email/password.")
+                    st.error(f"Hata: {e}")
             else:
                 st.warning("Please enter both email and password.")
                 
@@ -349,19 +306,11 @@ def login_page():
                     user = auth_client.create_user_with_email_and_password(new_email, new_password)
                     st.success("Account created successfully! Please go to the 'Login' tab to log in.")
                 except Exception as e:
-                    error_message = str(e)
-                    if "WEAK_PASSWORD" in error_message:
-                        st.warning("Password should be at least 6 characters.")
-                    elif "EMAIL_EXISTS" in error_message:
-                        st.warning("An account with this email already exists. Please log in.")
-                    elif "INVALID_EMAIL" in error_message:
-                        st.warning("Please enter a valid email address.")
-                    else:
-                        st.error("An unknown error occurred during sign up.")
+                    st.error(f"Account creation failed: {e}")
             else:
                 st.warning("Please enter both email and password.")
 
-# --- ANA MANTIK ---
+# --- ANA MANTIK: GİRİŞ YAPILDIYSA ANA UYGULAMAYI, DEĞİLSE LOGIN SAYFASINI GÖSTER ---
 if st.session_state['user_email']:
     main_app()
 else:
