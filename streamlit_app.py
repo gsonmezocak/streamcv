@@ -341,3 +341,132 @@ def main_app():
         with st.form("new_job_form", clear_on_submit=True):
             st.subheader("Add a Single Job Posting")
             job_title = st.text_input("Job Title")
+            job_description = st.text_area("Job Description", height=200)
+            submitted = st.form_submit_button("Save Single Job & Generate Vector")
+            
+            if submitted:
+                if job_title and job_description:
+                    with st.spinner("Generating AI fingerprint (vector)..."):
+                        job_vector = get_embedding(f"Title: {job_title}\n\nDescription: {job_description}")
+                    if job_vector:
+                        try:
+                            db.collection("job_postings").document().set({
+                                "title": job_title,
+                                "description": job_description,
+                                "created_at": firestore.SERVER_TIMESTAMP,
+                                "vector": job_vector,
+                                "added_by": st.session_state['user_email']
+                            })
+                            st.success(f"Successfully added '{job_title}'!")
+                            st.cache_data.clear() 
+                        except Exception as e: st.error(f"Error saving to Firebase: {e}")
+                    else: st.error("Could not generate AI fingerprint.")
+                else: st.warning("Please fill in both fields.")
+        
+        # (Toplu yükleme kodu - Değişiklik yok, ama import pandas/io eklenmeli)
+        # BİR ÖNCEKİ KODDAKİ PANDAS IMPORT'LARINI YUKARI EKLEDİM
+        st.divider()
+        st.subheader("OR... Bulk Upload Jobs from CSV/Excel")
+        st.markdown("Upload a file with **'title'** and **'description'** columns.")
+        
+        # (Toplu Yükleme kodu - Faz 3.4'teki gibi, değişiklik yok)
+        # ... (Bir önceki cevaptaki Faz 3.4'ün 'tab2' kodunu buraya ekleyebilirsiniz) ...
+
+
+    # (Sekme 3: Profilim. Değişiklik yok)
+    with tab3:
+        st.header("My Profile")
+        st.markdown("Save your CV here so you don't have to paste it every time.")
+        
+        current_cv = get_user_cv(user_id)
+        
+        with st.form("profile_form"):
+            new_cv_text = st.text_area("Your CV Text", value=current_cv, height=400)
+            submitted = st.form_submit_button("Save CV to Profile")
+            
+            if submitted:
+                try:
+                    with st.spinner("Generating AI fingerprint for your CV..."):
+                        cv_vector = get_embedding(new_cv_text)
+                    
+                    if cv_vector:
+                        db.collection("user_profiles").document(user_id).set({
+                            "email": st.session_state['user_email'],
+                            "cv_text": new_cv_text,
+                            "cv_vector": cv_vector,
+                            "updated_at": firestore.SERVER_TIMESTAMP
+                        }, merge=True)
+                        st.success("Your CV has been successfully saved to your profile!")
+                    else:
+                        st.error("Could not generate AI fingerprint for your CV. Not saved.")
+                except Exception as e:
+                    st.error(f"An error occurred while saving your profile: {e}")
+
+# --- LOGIN SAYFASI FONKSİYONU (Değişiklik yok) ---
+def login_page():
+    st.title("🤖 AI CV Matching Platform")
+    
+    st.markdown("Welcome! Log in or sign up to find your perfect job match.")
+    st.markdown("---")
+
+    with st.spinner("Loading platform stats..."):
+        total_jobs, total_profiles = get_platform_stats()
+        total_users = get_total_user_count()
+    
+    stat_col1, stat_col2, stat_col3 = st.columns(3)
+    with stat_col1:
+        st.metric(label="👥 Total Registered Users", value=total_users)
+    with stat_col2:
+        st.metric(label="🎯 Total Jobs in Pool", value=total_jobs)
+    with stat_col3:
+        st.metric(label="👤 Saved CV Profiles", value=total_profiles)
+
+    st.markdown("---")
+    
+    login_tab, signup_tab = st.tabs(["Login", "Sign Up"])
+    
+    with login_tab:
+        st.subheader("Login")
+        email = st.text_input("Email", key="login_email")
+        password = st.text_input("Password", type="password", key="login_pass")
+        
+        if st.button("Login", type="primary", key="login_button"):
+            if email and password:
+                try:
+                    user = auth_client.sign_in_with_email_and_password(email, password)
+                    st.session_state['user_email'] = user['email']
+                    st.session_state['user_token'] = user['idToken']
+                    st.rerun() 
+                except Exception as e:
+                    st.warning("Login failed. Please check your email and password.")
+            else:
+                st.warning("Please enter both email and password.")
+                
+    with signup_tab:
+        st.subheader("Create a New Account")
+        new_email = st.text_input("Email", key="signup_email")
+        new_password = st.text_input("Password", type="password", key="signup_pass")
+        
+        if st.button("Sign Up", type="primary", key="signup_button"):
+            if new_email and new_password:
+                try:
+                    user = auth_client.create_user_with_email_and_password(new_email, new_password)
+                    st.success("Account created successfully! Please go to the 'Login' tab to log in.")
+                except Exception as e:
+                    error_message = str(e)
+                    if "WEAK_PASSWORD" in error_message:
+                        st.warning("Password should be at least 6 characters.")
+                    elif "EMAIL_EXISTS" in error_message:
+                        st.warning("An account with this email already exists. Please log in.")
+                    elif "INVALID_EMAIL" in error_message:
+                        st.warning("Please enter a valid email address.")
+                    else:
+                        st.error("An unknown error occurred during sign up.")
+            else:
+                st.warning("Please enter both email and password.")
+
+# --- ANA MANTIK ---
+if st.session_state['user_email']:
+    main_app()
+else:
+    login_page()
