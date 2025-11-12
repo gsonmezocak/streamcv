@@ -124,7 +124,7 @@ def load_custom_css():
         .stTabs [data-baseweb="tab"] {
             background: transparent;
             border-radius: 8px;
-            color: #1e3c72;
+            color: black;
             font-weight: 500;
             padding: 0.75rem 1.5rem;
             transition: all 0.3s ease;
@@ -142,6 +142,7 @@ def load_custom_css():
         /* Cards/Containers */
         [data-testid="stVerticalBlock"] > div {
             background: white;
+            color: black; 
             border-radius: 16px;
             padding: 2rem;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
@@ -155,7 +156,7 @@ def load_custom_css():
         
         /* Headers */
         h2 {
-            color: #1e3c72;
+            color: black;
             font-weight: 600;
             font-size: 1.75rem;
             margin-bottom: 1rem;
@@ -164,7 +165,7 @@ def load_custom_css():
         }
         
         h3 {
-            color: #2a5298;
+            color: black;
             font-weight: 600;
             font-size: 1.25rem;
         }
