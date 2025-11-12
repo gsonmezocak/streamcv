@@ -22,7 +22,7 @@ except Exception as e:
 
 # --- Gemini Modelini Ayarlama ---
 # gemini-1.5-flash en hızlı ve maliyet-etkin modellerden biridir.
-model = genai.GenerativeModel('gemini-1.5-pro-latest')
+model = genai.GenerativeModel('gemini-1.5-flash')
 
 # --- Prompt (AI'a Vereceğimiz Komut) Tasarımı ---
 def create_prompt(cv, ilan):
