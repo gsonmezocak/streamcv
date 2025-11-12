@@ -15,7 +15,7 @@ st.markdown("Bu uygulama, Gemini AI kullanarak bir CV metni ile bir iş ilanı m
 # --- API Anahtarını Güvenli Yerden Alma ---
 # Streamlit'in secrets özelliğini kullanarak anahtarı güvenle çekiyoruz.
 try:
-    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+    genai.configure(api_key=st.secrets["AIzaSyDD9e6UF43PpDIYFcHB23KmD22qR2lsNRY"])
 except Exception as e:
     st.error("API Anahtarı bulunamadı veya geçersiz. Lütfen secrets.toml dosyanızı kontrol edin.")
     st.stop() # Hata varsa uygulamayı durdur
@@ -23,6 +23,7 @@ except Exception as e:
 # --- Gemini Modelini Ayarlama ---
 # gemini-1.5-flash en hızlı ve maliyet-etkin modellerden biridir.
 model = genai.GenerativeModel('gemini-1.5-flash')
+return genai.GenerativeModel('gemini-1.5-flash')
 
 # --- Prompt (AI'a Vereceğimiz Komut) Tasarımı ---
 def create_prompt(cv, ilan):
