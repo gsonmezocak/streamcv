@@ -2,7 +2,7 @@ import streamlit as st
 import google.generativeai as genai
 import firebase_admin
 from firebase_admin import credentials, firestore
-import json
+import json # JSON kütüphanesini içe aktardığımızdan emin olalım
 
 # --- Sayfa Ayarları ---
 st.set_page_config(
@@ -11,29 +11,29 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- 1. FIREBASE BAĞLANTISI ---
+# --- 1. FIREBASE BAĞLANTISI (DÜZELTİLDİ) ---
 @st.cache_resource
 def init_firebase():
     """
     Streamlit Secrets'tan alınan kimlik bilgileriyle Firebase'i başlatır.
     """
     try:
-        # st.secrets'tan dict olarak almayı dene (TOML'un akıllıca ayrıştırması)
-        creds_dict = st.secrets["FIREBASE_CREDENTIALS"]
-    except Exception:
-        # Başarısız olursa, string olarak alıp JSON'a çevirmeyi dene
+        # 1. Adım: Secret'ı her zaman bir METİN (string) olarak al
         creds_json_str = st.secrets["FIREBASE_CREDENTIALS"]
+        
+        # 2. Adım: Bu metni bir Python SÖZLÜĞÜNE (dict) çevir
         creds_dict = json.loads(creds_json_str)
         
-    try:
+        # 3. Adım: Sözlüğü kimlik bilgisi olarak Firebase'e ver
         creds = credentials.Certificate(creds_dict)
         firebase_admin.initialize_app(creds)
+        
     except ValueError:
         # Uygulama zaten başlatılmışsa bu hatayı verir, görmezden gel
         pass
     except Exception as e:
         st.error(f"Firebase başlatılırken hata oluştu: {e}")
-        st.error("Lütfen Streamlit Secrets'taki FIREBASE_CREDENTIALS anahtarınızı kontrol edin.")
+        st.error("Lütfen Streamlit Secrets'taki FIREBASE_CREDENTIALS anahtarınızın ADINI ve İÇERİĞİNİ (üçlü tırnaklar dahil) kontrol edin.")
         st.stop()
         
     return firestore.client()
@@ -127,8 +127,7 @@ def get_gemini_analysis(cv, job_post):
 
 
 # --- ANA UYGULAMA ARAYÜZÜ ---
-
-st.title("🤖 AI CV Matching Platform (v1 - Firebase)")
+# (Bu bölümün geri kalanı değişmedi, olduğu gibi doğru)
 
 tab1, tab2 = st.tabs(["🚀 CV Matcher", "📝 Add New Job Posting"])
 
