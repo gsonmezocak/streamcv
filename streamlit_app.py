@@ -9,9 +9,9 @@ import pyrebase # (YENİ) Kullanıcı girişi için
 
 # --- Sayfa Ayarları ---
 st.set_page_config(
-    page_title="AI Powered CV Matching",
-    page_icon="🤖",
-    layout="wide"
+    page_title="AI Powered CV Matching",
+    page_icon="🤖",
+    layout="wide"
 )
 
 # --- 1. FIREBASE ADMIN BAĞLANTISI (Veritabanı için) ---
