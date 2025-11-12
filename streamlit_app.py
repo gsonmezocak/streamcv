@@ -10,7 +10,7 @@ st.set_page_config(
 
 # --- Title and Description ---
 st.title("🤖 AI Powered CV - Job Posting Matcher (MVP)")
-st.markdown("This application analyzes the compatibility between a CV and a job posting using Gemini AI.")
+st.markdown("This application analyzes the compatibility between a CV and a job posting using.")
 
 # --- API Key Authentication ---
 # Securely fetching the API key using Streamlit's secrets feature.
@@ -62,7 +62,7 @@ with col2:
 if st.button("Run Compatibility Analysis", type="primary", use_container_width=True):
     if cv_text and ilan_text:
         # Show a loading spinner while processing
-        with st.spinner("Gemini AI is analyzing the CV and job post... Please wait."):
+        with st.spinner("We are analyzing the CV and job post... Please wait."):
             try:
                 # Create the prompt
                 prompt = create_prompt(cv_text, ilan_text)
