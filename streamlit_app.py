@@ -1,11 +1,13 @@
 import streamlit as st
 import google.generativeai as genai
 import firebase_admin
-from firebase_admin import credentials, firestore, auth # 'auth' eklendi
+from firebase_admin import credentials, firestore, auth
 import json
 import numpy as np
 import re
 import pyrebase 
+import pandas as pd # (YENİ) CSV/Excel okumak için
+import io # (YENİ) Yüklenen dosyayı okumak için
 
 # --- Sayfa Ayarları ---
 st.set_page_config(
@@ -14,7 +16,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- 1. FIREBASE ADMIN BAĞLANTISI (Veritabanı için) ---
+# --- 1. FIREBASE ADMIN BAĞLANTISI ---
 @st.cache_resource
 def init_firebase_admin():
     try:
@@ -23,23 +25,20 @@ def init_firebase_admin():
         creds = credentials.Certificate(creds_dict)
         firebase_admin.initialize_app(creds)
     except ValueError:
-        pass # Uygulama zaten başlatılmış
+        pass 
     except Exception as e:
         st.error(f"🔥 FİREBASE ADMİN HATASI: {e}")
         st.stop()
     return firestore.client()
 
-# --- 2. FIREBASE AUTH BAĞLANTISI (Login için) ---
+# --- 2. FIREBASE AUTH BAĞLANTISI ---
 @st.cache_resource
 def init_firebase_auth():
-    """
-    Kullanıcı girişi için Pyrebase'i başlatır.
-    """
     try:
         firebase_config = {
             "apiKey": st.secrets["FIREBASE_WEB_API_KEY"],
             "authDomain": f"{st.secrets['firebase_credentials']['project_id']}.firebaseapp.com",
-            "projectId": st.secrets["firebase_credentials"]["project_id"],
+            "projectId": st.secrets['firebase_credentials']['project_id'],
             "storageBucket": f"{st.secrets['firebase_credentials']['project_id']}.appspot.com",
             "databaseURL": f"https://{st.secrets['firebase_credentials']['project_id']}-default-rtdb.firebaseio.com",
         }
@@ -47,7 +46,6 @@ def init_firebase_auth():
         return firebase.auth()
     except Exception as e:
         st.error(f"🔥 FİREBASE AUTH HATASI: {e}")
-        st.error("Lütfen Secrets'taki 'FIREBASE_WEB_API_KEY' ve 'firebase_credentials' ayarlarınızı kontrol edin.")
         st.stop()
 
 # --- 3. GEMINI AI BAĞLANTISI ---
@@ -71,7 +69,7 @@ except Exception as e:
     st.error("Uygulama başlatılırken kritik bir hata oluştu.")
     st.stop()
 
-# --- OTURUM YÖNETİMİ (Session State) ---
+# --- OTURUM YÖNETİMİ ---
 if 'user_email' not in st.session_state:
     st.session_state['user_email'] = None
 if 'user_token' not in st.session_state:
@@ -79,33 +77,21 @@ if 'user_token' not in st.session_state:
 
 # --- YARDIMCI FONKSİYONLAR ---
 
-# (YENİ) Dashboard için İstatistik Fonksiyonları
-@st.cache_data(ttl=300) # 5 dakika önbellek
+@st.cache_data(ttl=300) 
 def get_platform_stats():
-    """
-    Dashboard'da gösterilecek temel istatistikleri çeker.
-    """
     try:
-        # 1. Toplam İlan Sayısı
         job_docs = db.collection("job_postings").stream()
         total_jobs = sum(1 for _ in job_docs)
-        
-        # 2. Toplam Profil Sayısı (CV'sini kaydeden)
         profile_docs = db.collection("user_profiles").stream()
         total_profiles = sum(1 for _ in profile_docs)
-        
         return total_jobs, total_profiles
     except Exception as e:
         st.error(f"İstatistikler çekilirken hata: {e}")
         return 0, 0
 
-@st.cache_data(ttl=3600) # 1 saat önbellek (bu yavaş bir işlemdir)
+@st.cache_data(ttl=3600) 
 def get_total_user_count():
-    """
-    Firebase Authentication'daki toplam kayıtlı kullanıcı sayısını çeker.
-    """
     try:
-        # Bu, tüm kullanıcıları listeler
         page = auth.list_users()
         all_users = list(page.iterate_all())
         return len(all_users)
@@ -120,7 +106,7 @@ def get_job_postings_with_vectors():
         docs = db.collection("job_postings").stream()
         for doc in docs:
             job_data = doc.to_dict()
-            if 'vector' in job_data: # Sadece vektörü olanları al
+            if 'vector' in job_data: 
                 jobs.append({
                     "id": doc.id,
                     "title": job_data.get("title", "No Title"),
@@ -181,20 +167,19 @@ def get_user_cv(user_id):
 # --- ANA UYGULAMA FONKSİYONU ---
 def main_app():
     
-    # --- Üst Bar: Kullanıcı bilgisi ve Çıkış Butonu ---
     col1, col2 = st.columns([0.8, 0.2])
     with col1:
-        st.title("🤖 AI CV Matching Platform") # v3-Profile -> v3.3-Dashboard
+        st.title("🤖 AI CV Matching Platform")
     with col2:
         st.write(f"Logged in as: `{st.session_state['user_email']}`")
         if st.button("Logout", use_container_width=True):
             st.session_state['user_email'] = None
             st.session_state['user_token'] = None
-            st.rerun() # Sayfayı yenile (login ekranına dönecek)
-
+            st.rerun() 
+            
     st.markdown("---") 
 
-    # --- (YENİ) Dashboard Metrikleri (Ana Sayfa) ---
+    # --- Dashboard Metrikleri ---
     with st.spinner("Loading platform stats..."):
         total_jobs, total_profiles = get_platform_stats()
         total_users = get_total_user_count()
@@ -208,13 +193,12 @@ def main_app():
         st.metric(label="👤 Saved CV Profiles", value=total_profiles, help="Number of users who have saved their CV.")
 
     st.markdown("---")
-
-    # (Devamı...)
+    
     user_id = auth_client.get_account_info(st.session_state['user_token'])['users'][0]['localId']
 
-    tab1, tab2, tab3 = st.tabs(["🚀 Auto-Matcher", "📝 Add New Job Posting", "👤 My Profile"])
+    tab1, tab2, tab3 = st.tabs(["🚀 Auto-Matcher", "📝 Job Management", "👤 My Profile"]) # (GÜNCELLENDİ) Sekme adı
 
-    # --- Sekme 1: OTOMATİK CV EŞLEŞTİRİCİ ---
+    # --- Sekme 1: Auto-Matcher (Değişiklik yok) ---
     with tab1:
         st.header("Find the Best Jobs for Your CV")
         st.markdown("We will use the CV saved in your 'My Profile' tab. If it's empty, please paste your CV below.")
@@ -259,13 +243,16 @@ def main_app():
             else:
                 st.warning("Please paste your CV text to find matches.")
 
-    # --- Sekme 2: YENİ İLAN EKLEME ---
+    # --- Sekme 2: İLAN YÖNETİMİ (TAMAMEN GÜNCELLENDİ) ---
     with tab2:
-        st.header("Add a New Job Posting to the Database")
+        st.header("Add New Job Postings")
+        
+        # 1. BÖLÜM: Tek İlan Ekleme
         with st.form("new_job_form", clear_on_submit=True):
+            st.subheader("Add a Single Job Posting")
             job_title = st.text_input("Job Title")
-            job_description = st.text_area("Job Description", height=300)
-            submitted = st.form_submit_button("Save Job & Generate Vector")
+            job_description = st.text_area("Job Description", height=200)
+            submitted = st.form_submit_button("Save Single Job & Generate Vector")
             
             if submitted:
                 if job_title and job_description:
@@ -278,15 +265,78 @@ def main_app():
                                 "description": job_description,
                                 "created_at": firestore.SERVER_TIMESTAMP,
                                 "vector": job_vector,
-                                "added_by": st.session_state['user_email'] # Kimin eklediğini kaydet
+                                "added_by": st.session_state['user_email']
                             })
                             st.success(f"Successfully added '{job_title}'!")
-                            st.cache_data.clear()
+                            st.cache_data.clear() # İstatistikleri yenilemek için cache'i temizle
                         except Exception as e: st.error(f"Error saving to Firebase: {e}")
                     else: st.error("Could not generate AI fingerprint.")
                 else: st.warning("Please fill in both fields.")
 
-    # --- Sekme 3: PROFİLİM ---
+        st.divider()
+        
+        # 2. BÖLÜM: (YENİ) Toplu İlan Yükleme
+        st.subheader("OR... Bulk Upload Jobs from CSV/Excel")
+        st.markdown("Upload a file with **'title'** and **'description'** columns.")
+        
+        uploaded_file = st.file_uploader("Choose a CSV or Excel file", type=["csv", "xlsx"])
+        
+        if uploaded_file is not None:
+            try:
+                # Dosyayı oku
+                if uploaded_file.name.endswith('.csv'):
+                    df = pd.read_csv(uploaded_file)
+                else:
+                    df = pd.read_excel(uploaded_file)
+
+                # Sütunları kontrol et
+                if 'title' not in df.columns or 'description' not in df.columns:
+                    st.error("Error: File must contain 'title' and 'description' columns.")
+                else:
+                    st.success(f"File '{uploaded_file.name}' read successfully. Found {len(df)} jobs.")
+                    st.dataframe(df.head()) # İlk 5 ilanı göster
+                    
+                    if st.button(f"Process and Upload {len(df)} Jobs", type="primary"):
+                        st.info("Starting bulk upload... This may take several minutes. Do not close this tab.")
+                        progress_bar = st.progress(0, text="Starting...")
+                        success_count = 0
+                        
+                        # (YENİ) Firebase Batch Writer kullan (daha hızlı yükleme için)
+                        batch = db.batch()
+                        
+                        for index, row in df.iterrows():
+                            title = str(row['title'])
+                            description = str(row['description'])
+                            
+                            # İlerleme çubuğunu güncelle
+                            progress_text = f"Processing ({index + 1}/{len(df)}): {title[:30]}..."
+                            progress_bar.progress((index + 1) / len(df), text=progress_text)
+                            
+                            # 1. Vektörü al
+                            job_vector = get_embedding(f"Title: {title}\n\nDescription: {description}")
+                            
+                            if job_vector:
+                                # 2. Veritabanı dokümanı oluştur ve batch'e ekle
+                                doc_ref = db.collection("job_postings").document()
+                                batch.set(doc_ref, {
+                                    "title": title,
+                                    "description": description,
+                                    "created_at": firestore.SERVER_TIMESTAMP,
+                                    "vector": job_vector,
+                                    "added_by": f"bulk_upload_{st.session_state['user_email']}"
+                                })
+                                success_count += 1
+                        
+                        # 3. Tüm işler bittiğinde, batch'i tek seferde veritabanına gönder
+                        batch.commit()
+                        
+                        st.success(f"Done! Successfully processed and uploaded {success_count} out of {len(df)} jobs.")
+                        st.cache_data.clear() # İstatistikleri yenile
+                        
+            except Exception as e:
+                st.error(f"An error occurred while processing the file: {e}")
+
+    # --- Sekme 3: Profilim (Değişiklik yok) ---
     with tab3:
         st.header("My Profile")
         st.markdown("Save your CV here so you don't have to paste it every time.")
@@ -308,21 +358,20 @@ def main_app():
                             "cv_text": new_cv_text,
                             "cv_vector": cv_vector,
                             "updated_at": firestore.SERVER_TIMESTAMP
-                        }, merge=True) # merge=True, var olanı güncelle
+                        }, merge=True)
                         st.success("Your CV has been successfully saved to your profile!")
                     else:
                         st.error("Could not generate AI fingerprint for your CV. Not saved.")
                 except Exception as e:
                     st.error(f"An error occurred while saving your profile: {e}")
 
-# --- LOGIN SAYFASI FONKSİYONU (GÜNCELLENDİ) ---
+# --- LOGIN SAYFASI FONKSİYONU (Değişiklik yok) ---
 def login_page():
     st.title("🤖 AI CV Matching Platform")
     
     st.markdown("Welcome! Log in or sign up to find your perfect job match.")
     st.markdown("---")
 
-    # --- (YENİ) Login Sayfasına İstatistikleri Ekleme ---
     with st.spinner("Loading platform stats..."):
         total_jobs, total_profiles = get_platform_stats()
         total_users = get_total_user_count()
@@ -337,7 +386,6 @@ def login_page():
 
     st.markdown("---")
     
-    # (Devamı)
     login_tab, signup_tab = st.tabs(["Login", "Sign Up"])
     
     with login_tab:
@@ -353,7 +401,6 @@ def login_page():
                     st.session_state['user_token'] = user['idToken']
                     st.rerun() 
                 except Exception as e:
-                    # Hata mesajını dostça göster
                     st.warning("Login failed. Please check your email and password.")
             else:
                 st.warning("Please enter both email and password.")
@@ -369,7 +416,6 @@ def login_page():
                     user = auth_client.create_user_with_email_and_password(new_email, new_password)
                     st.success("Account created successfully! Please go to the 'Login' tab to log in.")
                 except Exception as e:
-                    # Firebase hatalarını yakala ve kullanıcıya dostça göster
                     error_message = str(e)
                     if "WEAK_PASSWORD" in error_message:
                         st.warning("Password should be at least 6 characters.")
@@ -382,7 +428,7 @@ def login_page():
             else:
                 st.warning("Please enter both email and password.")
 
-# --- ANA MANTIK: GİRİŞ YAPILDIYSA ANA UYGULAMAYI, DEĞİLSE LOGIN SAYFASINI GÖSTER ---
+# --- ANA MANTIK ---
 if st.session_state['user_email']:
     main_app()
 else:
