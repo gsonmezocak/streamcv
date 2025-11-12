@@ -6,7 +6,8 @@ import json
 import numpy as np
 import re
 import pyrebase 
-import time # (YENİ) Analiz süresini göstermek için
+import time
+import concurrent.futures # (YENİ) Paralel API çağrıları için
 
 # --- Sayfa Ayarları ---
 st.set_page_config(
@@ -52,16 +53,8 @@ def init_firebase_auth():
 def init_gemini():
     try:
         genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-        
-        # (YENİ) Gemini'yi JSON modunda çalışacak şekilde yapılandır
-        generation_config = genai.types.GenerationConfig(
-            response_mime_type="application/json"
-        )
-        analysis_model = genai.GenerativeModel(
-            'models/gemini-flash-latest',
-            generation_config=generation_config # JSON modunu uygula
-        )
-        
+        generation_config = genai.types.GenerationConfig(response_mime_type="application/json")
+        analysis_model = genai.GenerativeModel('models/gemini-flash-latest', generation_config=generation_config)
         embedding_model = genai.GenerativeModel('models/text-embedding-004')
         return analysis_model, embedding_model
     except Exception as e:
@@ -125,11 +118,6 @@ def get_job_postings_with_vectors():
         return []
 
 def get_gemini_analysis(cv, job_post):
-    """
-    (GÜNCELLENDİ) Artık metin değil, doğrudan bir Python sözlüğü (dict) döndürüyor.
-    """
-    
-    # (YENİ) Prompt'u JSON formatı istemek için güncelledik
     prompt = f"""
     You are a senior Human Resources (HR) specialist.
     Analyze the following CV and JOB POSTING.
@@ -152,21 +140,14 @@ def get_gemini_analysis(cv, job_post):
     """
     try:
         response = gemini_model.generate_content(prompt)
-        
-        # (YENİ) Yanıtı doğrudan JSON olarak yükle
-        # Gemini'nin JSON modu bazen '```json\n{...}\n```' ile sarmalayabilir.
-        # Her ihtimale karşı temizliyoruz.
         clean_json_text = re.sub(r"^```json\n", "", response.text)
         clean_json_text = re.sub(r"\n```$", "", clean_json_text).strip()
-        
         analysis_data = json.loads(clean_json_text)
         return analysis_data
-        
-    except json.JSONDecodeError:
-        st.error(f"AI analizi sırasında JSON hatası oluştu. AI'ın ham yanıtı: {response.text}")
-        return None # Hata durumunda None döndür
     except Exception as e:
-        st.error(f"AI analizi sırasında bilinmeyen bir hata oluştu: {e}")
+        # Hata durumunda, AI'ın ne döndüğünü görmek için loglayabiliriz
+        print(f"JSON Parse Hatası: {e}")
+        print(f"AI Ham Yanıtı: {response.text}")
         return None 
 
 def get_embedding(text):
@@ -224,7 +205,7 @@ def main_app():
 
     tab1, tab2, tab3 = st.tabs(["🚀 Auto-Matcher", "📝 Job Management", "👤 My Profile"])
 
-    # --- (TAMAMEN YENİDEN YAZILDI) Sekme 1: Auto-Matcher ---
+    # --- (GÜNCELLENDİ) Sekme 1: Auto-Matcher (Hızlandırıldı) ---
     with tab1:
         st.header("Find the Best Jobs for Your CV")
         st.markdown("We will use the CV saved in your 'My Profile' tab. If it's empty, please paste your CV below.")
@@ -234,13 +215,12 @@ def main_app():
         with st.container(border=True):
             cv_text = st.text_area("📄 Your CV Text:", value=saved_cv, height=350)
         
-        # (YENİ) Gösterilecek ve taranacak ilan sayıları
-        CANDIDATE_POOL_SIZE = 10 # Kaç ilanı analiz edeceğiz (daha yüksek = daha doğru ama yavaş)
-        TOP_N_RESULTS = 5       # Kullanıcıya kaçını göstereceğiz
+        CANDIDATE_POOL_SIZE = 10 
+        TOP_N_RESULTS = 5       
         
         if st.button(f"Find My Top {TOP_N_RESULTS} Matches", type="primary", use_container_width=True):
             if cv_text:
-                start_time = time.time() # Zamanlayıcıyı başlat
+                start_time = time.time() 
                 
                 # --- Adım 1: Hızlı Filtreleme (Vektör Arama) ---
                 with st.spinner(f"Step 1/3: Searching all jobs for the top {CANDIDATE_POOL_SIZE} candidates..."):
@@ -258,28 +238,40 @@ def main_app():
                     cv_vector_np = np.array(cv_vector)
                     similarities = np.dot(job_vectors, cv_vector_np)
                     
-                    # Havuz boyutunu, toplam ilan sayısından az olacak şekilde ayarla
                     pool_size = min(len(all_jobs), CANDIDATE_POOL_SIZE)
                     top_candidate_indices = np.argsort(similarities)[-pool_size:][::-1]
 
-                # --- Adım 2: Detaylı Analiz (AI Çağrıları) ---
+                # --- (YENİ) Adım 2: Paralel Analiz (Hızlı) ---
                 analysis_results = []
-                progress_bar = st.progress(0, text=f"Step 2/3: Analyzing {pool_size} candidates...")
+                progress_bar = st.progress(0, text=f"Step 2/3: Analyzing {pool_size} candidates... (0%)")
 
-                for i, index in enumerate(top_candidate_indices):
-                    matched_job = all_jobs[index]
+                # (YENİ) ThreadPoolExecutor kullanarak 10 işi aynı anda başlat
+                with concurrent.futures.ThreadPoolExecutor(max_workers=pool_size) as executor:
+                    # Gelecekteki işleri ve hangi ilana ait olduklarını sakla
+                    future_to_job = {}
+                    for index in top_candidate_indices:
+                        matched_job = all_jobs[index]
+                        future = executor.submit(get_gemini_analysis, cv_text, matched_job['description'])
+                        future_to_job[future] = matched_job
                     
-                    # AI'ı çağır ve JSON sonucunu al
-                    analysis_data = get_gemini_analysis(cv_text, matched_job['description'])
-                    
-                    if analysis_data and analysis_data.get("score") is not None:
-                        analysis_results.append({
-                            "job": matched_job,
-                            "data": analysis_data,
-                            "score": int(analysis_data.get("score", 0)) # Skoru al
-                        })
-                    
-                    progress_bar.progress((i + 1) / pool_size, text=f"Step 2/3: Analyzing '{matched_job['title'][:30]}...'")
+                    completed_count = 0
+                    for future in concurrent.futures.as_completed(future_to_job):
+                        matched_job = future_to_job[future]
+                        try:
+                            analysis_data = future.result() # İşi bitenin sonucunu al
+                            if analysis_data and analysis_data.get("score") is not None:
+                                analysis_results.append({
+                                    "job": matched_job,
+                                    "data": analysis_data,
+                                    "score": int(analysis_data.get("score", 0))
+                                })
+                        except Exception as e:
+                            st.error(f"Error analyzing job '{matched_job['title']}': {e}")
+                        
+                        # (YENİ) Yüzdelik ilerleme çubuğu
+                        completed_count += 1
+                        percent_complete = completed_count / pool_size
+                        progress_bar.progress(percent_complete, text=f"Step 2/3: Analyzing... {int(percent_complete * 100)}% complete")
                 
                 progress_bar.empty()
 
@@ -289,14 +281,12 @@ def main_app():
                         st.error("AI analysis failed for all candidates. Please try again.")
                         st.stop()
 
-                    # (YENİ) Listeyi, metin benzerliğine göre değil, AI SKORUNA göre sırala
                     sorted_results = sorted(analysis_results, key=lambda x: x["score"], reverse=True)
                     
                     end_time = time.time()
                     st.success(f"Done! Found and ranked your Top {TOP_N_RESULTS} matches in {end_time - start_time:.2f} seconds.")
                     st.markdown("---")
 
-                    # Sadece en iyi 5'i göster
                     for i, result in enumerate(sorted_results[:TOP_N_RESULTS]):
                         rank = i + 1
                         job_title = result["job"]["title"]
@@ -305,39 +295,26 @@ def main_app():
                         
                         with st.container(border=True):
                             col_metric, col_details = st.columns([0.2, 0.8])
-                            
                             with col_metric:
-                                # Skoru yazdır
                                 st.metric(label=f"Rank #{rank} Match", value=f"{score}%")
-                            
                             with col_details:
                                 st.subheader(job_title)
                                 with st.expander("Click to see detailed AI analysis"):
-                                    # Sonuçları JSON'dan manuel olarak yazdır
                                     st.subheader("Summary")
                                     st.write(analysis_data.get("summary", "N/A"))
-                                    
                                     st.subheader("Strengths (Pros)")
-                                    pros = analysis_data.get("pros", [])
-                                    if pros:
-                                        for pro in pros: st.markdown(f"* {pro}")
-                                    else:
-                                        st.write("N/A")
-                                        
+                                    for pro in analysis_data.get("pros", []): st.markdown(f"* {pro}")
                                     st.subheader("Weaknesses (Cons)")
-                                    cons = analysis_data.get("cons", [])
-                                    if cons:
-                                        for con in cons: st.markdown(f"* {con}")
-                                    else:
-                                        st.write("N/A")
+                                    for con in analysis_data.get("cons", []): st.markdown(f"* {con}")
                         st.divider()
             else:
                 st.warning("Please paste your CV text to find matches.")
 
-    # (Sekme 2: İlan Ekleme. Değişiklik yok)
+    # --- Sekme 2: İlan Yönetimi (Toplu Yükleme dahil) ---
     with tab2:
         st.header("Job Management")
         
+        # Tekli ilan formu
         with st.form("new_job_form", clear_on_submit=True):
             st.subheader("Add a Single Job Posting")
             job_title = st.text_input("Job Title")
@@ -362,18 +339,63 @@ def main_app():
                         except Exception as e: st.error(f"Error saving to Firebase: {e}")
                     else: st.error("Could not generate AI fingerprint.")
                 else: st.warning("Please fill in both fields.")
-        
-        # (Toplu yükleme kodu - Değişiklik yok, ama import pandas/io eklenmeli)
-        # BİR ÖNCEKİ KODDAKİ PANDAS IMPORT'LARINI YUKARI EKLEDİM
+
         st.divider()
+        
+        # Toplu ilan yükleme
         st.subheader("OR... Bulk Upload Jobs from CSV/Excel")
         st.markdown("Upload a file with **'title'** and **'description'** columns.")
         
-        # (Toplu Yükleme kodu - Faz 3.4'teki gibi, değişiklik yok)
-        # ... (Bir önceki cevaptaki Faz 3.4'ün 'tab2' kodunu buraya ekleyebilirsiniz) ...
+        uploaded_file = st.file_uploader("Choose a CSV or Excel file", type=["csv", "xlsx"])
+        
+        if uploaded_file is not None:
+            try:
+                if uploaded_file.name.endswith('.csv'):
+                    df = pd.read_csv(uploaded_file)
+                else:
+                    df = pd.read_excel(uploaded_file)
+
+                if 'title' not in df.columns or 'description' not in df.columns:
+                    st.error("Error: File must contain 'title' and 'description' columns.")
+                else:
+                    st.success(f"File '{uploaded_file.name}' read successfully. Found {len(df)} jobs.")
+                    st.dataframe(df.head())
+                    
+                    if st.button(f"Process and Upload {len(df)} Jobs", type="primary"):
+                        st.info("Starting bulk upload... This may take several minutes.")
+                        progress_bar_bulk = st.progress(0, text="Starting...")
+                        success_count = 0
+                        batch = db.batch()
+                        
+                        for index, row in df.iterrows():
+                            title = str(row['title'])
+                            description = str(row['description'])
+                            
+                            progress_text = f"Processing ({index + 1}/{len(df)}): {title[:30]}..."
+                            progress_bar_bulk.progress((index + 1) / len(df), text=progress_text)
+                            
+                            job_vector = get_embedding(f"Title: {title}\n\nDescription: {description}")
+                            
+                            if job_vector:
+                                doc_ref = db.collection("job_postings").document()
+                                batch.set(doc_ref, {
+                                    "title": title,
+                                    "description": description,
+                                    "created_at": firestore.SERVER_TIMESTAMP,
+                                    "vector": job_vector,
+                                    "added_by": f"bulk_upload_{st.session_state['user_email']}"
+                                })
+                                success_count += 1
+                        
+                        batch.commit()
+                        st.success(f"Done! Successfully processed and uploaded {success_count} out of {len(df)} jobs.")
+                        st.cache_data.clear()
+                        
+            except Exception as e:
+                st.error(f"An error occurred while processing the file: {e}")
 
 
-    # (Sekme 3: Profilim. Değişiklik yok)
+    # --- Sekme 3: Profilim ---
     with tab3:
         st.header("My Profile")
         st.markdown("Save your CV here so you don't have to paste it every time.")
@@ -402,7 +424,7 @@ def main_app():
                 except Exception as e:
                     st.error(f"An error occurred while saving your profile: {e}")
 
-# --- LOGIN SAYFASI FONKSİYONU (Değişiklik yok) ---
+# --- LOGIN SAYFASI FONKSİYONU ---
 def login_page():
     st.title("🤖 AI CV Matching Platform")
     
