@@ -1,7 +1,7 @@
 import streamlit as st
 import google.generativeai as genai
 import firebase_admin
-from firebase_admin import credentials, firestore, auth # (YENİ) auth'u buraya ekledik
+from firebase_admin import credentials, firestore, auth # auth'u buraya ekledik
 import json
 import numpy as np
 import re
@@ -70,7 +70,7 @@ except Exception as e:
 # --- OTURUM YÖNETİMİ (Session State) ---
 if 'user_email' not in st.session_state:
     st.session_state['user_email'] = None
-if 'user_token' not st.session_state:
+if 'user_token' not in st.session_state:
     st.session_state['user_token'] = None
 
 # --- YARDIMCI FONKSİYONLAR ---
@@ -109,7 +109,7 @@ def get_total_user_count():
         st.error(f"Toplam kullanıcı sayısı çekilirken hata: {e}")
         return 0
 
-# (Diğer yardımcı fonksiyonlar... Değişiklik yok)
+# (Diğer yardımcı fonksiyonlar...)
 @st.cache_data(ttl=300) 
 def get_job_postings_with_vectors():
     jobs = []
@@ -191,7 +191,7 @@ def main_app():
             
     st.markdown("---") 
 
-    # --- (YENİ) Dashboard Metrikleri ---
+    # --- (YENİ) İSTEDİĞİNİZ DASHBOARD METRİKLERİ ---
     with st.spinner("Loading platform stats..."):
         total_jobs, total_profiles = get_platform_stats()
         total_users = get_total_user_count()
@@ -199,9 +199,11 @@ def main_app():
     stat_col1, stat_col2, stat_col3 = st.columns(3)
     
     with stat_col1:
+        # Kullanıcı Sayısı
         st.metric(label="👥 Total Registered Users", value=total_users)
     
     with stat_col2:
+        # İlan Sayısı
         st.metric(label="🎯 Total Jobs in Pool", value=total_jobs)
     
     with stat_col3:
