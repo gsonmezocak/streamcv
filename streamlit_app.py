@@ -262,7 +262,7 @@ def load_custom_css():
 
 # --- Sayfa Ayarları ---
 st.set_page_config(
-    page_title="AI CV Matcher | Quantum Edition",
+    page_title="AI CV - Internship Matcher",
     page_icon="⚡",
     layout="wide",
     initial_sidebar_state="collapsed"
@@ -300,7 +300,7 @@ def init_gemini():
 # --- HEADER ---
 st.markdown("""
 <div style='text-align: center; padding: 3rem 0 2rem 0;'>
-    <h1>⚡ QUANTUM CV MATCHER</h1>
+    <h1>⚡ Internship & CV MATCHER</h1>
     <p style='color: rgba(255, 255, 255, 0.7); font-size: 1.3rem; font-weight: 300; letter-spacing: 3px;'>
         POWERED BY GEMINI AI • NEURAL NETWORK MATCHING
     </p>
@@ -399,7 +399,7 @@ with tab1:
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        analyze_btn = st.button("⚡ INITIATE QUANTUM SCAN", type="primary", use_container_width=True)
+        analyze_btn = st.button("⚡ SCAN", type="primary", use_container_width=True)
     
     if analyze_btn:
         if cv_text:
@@ -431,7 +431,7 @@ with tab1:
                                 margin-bottom: 2.5rem;
                                 box-shadow: 0 0 30px rgba(0, 245, 255, 0.3);'>
                         <h2 style='margin: 0; color: white; text-shadow: 0 0 20px rgba(0, 245, 255, 0.8);'>
-                            🎯 TOP 3 QUANTUM MATCHES
+                            🎯 TOP 3 MATCHES
                         </h2>
                     </div>
                     """, unsafe_allow_html=True)
