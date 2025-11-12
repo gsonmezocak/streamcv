@@ -2,80 +2,80 @@ import streamlit as st
 import google.generativeai as genai
 import time
 
-# --- Sayfa Ayarları ---
+# --- Page Setup ---
 st.set_page_config(
-    page_title="AI Destekli CV Eşleştirme",
+    page_title="AI Powered CV Matching",
     page_icon="🤖"
 )
 
-# --- Başlık ve Açıklama ---
-st.title("🤖 AI Destekli CV - İş İlanı Eşleştirme (MVP)")
-st.markdown("Bu uygulama, Gemini AI kullanarak bir CV metni ile bir iş ilanı metni arasındaki uyumu analiz eder.")
+# --- Title and Description ---
+st.title("🤖 AI Powered CV - Job Posting Matcher (MVP)")
+st.markdown("This application analyzes the compatibility between a CV and a job posting using Gemini AI.")
 
-# --- API Anahtarını Güvenli Yerden Alma ---
-# Streamlit'in secrets özelliğini kullanarak anahtarı güvenle çekiyoruz.
+# --- API Key Authentication ---
+# Securely fetching the API key using Streamlit's secrets feature.
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 except Exception as e:
-    st.error("API Anahtarı bulunamadı veya geçersiz. Lütfen secrets.toml dosyanızı kontrol edin.")
-    st.stop() # Hata varsa uygulamayı durdur
+    st.error("API Key not found or invalid. Please check your secrets.toml file.")
+    st.stop() # Stop the app if there's an error
 
-# --- Gemini Modelini Ayarlama ---
-# Az önce listelediğimiz ve çalıştığı kanıtlanan model adını buraya yazıyoruz.
-model = genai.GenerativeModel('models/gemini-flash-latest') # <-- DÜZELTİLDİ
+# --- Configure Gemini Model ---
+# We are using the 'flash' model which is optimized for speed.
+model = genai.GenerativeModel('models/gemini-flash-latest') # <-- FAST MODEL
 
-# --- Prompt (AI'a Vereceğimiz Komut) Tasarımı ---
-def create_prompt(cv, ilan):
+# --- Prompt Design ---
+def create_prompt(cv, job_post):
     return f"""
-    Sen kıdemli bir İnsan Kaynakları (İK) uzmanısın ve görevin bir CV ile bir iş ilanını karşılaştırmak.
-    Aşağıdaki CV metni ile İŞ İLANI metnini detaylıca analiz et.
+    You are a senior Human Resources (HR) specialist, and your task is to compare a CV with a job posting.
+    Analyze the following CV text and JOB POSTING text in detail.
 
-    Analizini yaparken şu adımları izle:
-    1.  **Genel Uyum Skoru:** CV'nin ilana uygunluğunu 100 üzerinden puanla.
-    2.  **Güçlü Yönler (Artılar):** Adayın ilandaki gereksinimleri karşılayan en güçlü 3-4 yönünü listele.
-    3.  **Zayıf Yönler / Eksiklikler (Eksiler):** İlanda aranan ancak CV'de bulunmayan veya zayıf olan 3-4 noktayı listele.
-    4.  **Değerlendirme Özeti:** 2-3 cümlelik kısa bir genel değerlendirme yazısı yaz.
+    Follow these steps in your analysis:
+    1.  **Overall Compatibility Score:** Rate the CV's suitability for the job posting on a scale of 100.
+    2.  **Strengths (Pros):** List the top 3-4 strengths of the candidate that meet the job requirements.
+    3.  **Weaknesses / Gaps (Cons):** List 3-4 key points mentioned in the job posting that are missing or weak in the CV.
+    4.  **Evaluation Summary:** Write a brief 2-3 sentence overall evaluation summary.
 
-    Lütfen cevabını net başlıklar kullanarak **Markdown formatında** ver.
+    Please provide your answer in **Markdown format** using clear headings.
 
-    ---[CV METNİ]----
+    ---[CV TEXT]----
     {cv}
     -----------------
 
-    ---[İŞ İLANI METNİ]---
-    {ilan}
+    ---[JOB POSTING TEXT]---
+    {job_post}
     -----------------
     """
 
-# --- Kullanıcı Arayüzü (UI) ---
+# --- User Interface (UI) ---
 col1, col2 = st.columns(2)
 
 with col1:
-    st.subheader("📄 CV Metni")
-    cv_text = st.text_area("Adayın CV'sini buraya yapıştırın", height=300, label_visibility="collapsed")
+    st.subheader("📄 CV Text")
+    cv_text = st.text_area("Paste the candidate's CV text here", height=300, label_visibility="collapsed")
 
 with col2:
-    st.subheader("🎯 İş İlanı Metni")
-    ilan_text = st.text_area("İş ilanını buraya yapıştırın", height=300, label_visibility="collapsed")
+    st.subheader("🎯 Job Posting Text")
+    ilan_text = st.text_area("Paste the job posting text here", height=300, label_visibility="collapsed")
 
-# --- Buton ve Çalıştırma Mantığı ---
-if st.button("Uyum Analizi Yap", type="primary", use_container_width=True):
+# --- Button and Logic ---
+if st.button("Run Compatibility Analysis", type="primary", use_container_width=True):
     if cv_text and ilan_text:
-        # Butona basıldığında yükleniyor animasyonu göster
-        with st.spinner("Gemini AI, CV ve ilanı analiz ediyor... Lütfen bekleyin."):
+        # Show a loading spinner while processing
+        with st.spinner("Gemini AI is analyzing the CV and job post... Please wait."):
             try:
-                # Prompt'u oluştur
+                # Create the prompt
                 prompt = create_prompt(cv_text, ilan_text)
                 
-                # Gemini API'a isteği gönder
+                # Send the request to Gemini API
                 response = model.generate_content(prompt)
                 
-                # Sonucu ekrana yazdır
+                # Print the result
                 st.divider()
-                st.subheader("✨ Analiz Sonucu")
+                st.subheader("✨ Analysis Result")
                 st.markdown(response.text)
                 
             except Exception as e:
-                st.error(f"Analiz sırasında bir hata oluştu: {e}")
+                st.error(f"An error occurred during analysis: {e}")
     else:
-        st.warning("Lütfen hem CV hem de iş ilanı alanlarını doldurun.")
+        st.warning("Please fill in both the CV and Job Posting fields.")
