@@ -3,3 +3,5 @@ google-generativeai
 firebase-admin
 numpy
 pyrebase4
+pandas
+openpyxl
