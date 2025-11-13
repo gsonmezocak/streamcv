@@ -24,26 +24,117 @@ def load_custom_css():
     """
     st.markdown("""
         <style>
-        /* "Made with Streamlit" altbilgisini gizle */
-        footer { visibility: hidden; }
-        
-        /* Analiz kartları ve profil kutusu gibi tüm ana konteynerler */
-        [data-testid="stVerticalBlockBorderWrapper"] {
-            border-radius: 10px; /* Kenarları yumuşat */
-            box-shadow: 0 4px 12px 0 rgba(0,0,0,0.08); /* Hafif bir gölge ver */
-            transition: 0.3s;
-        }
-        
-        /* Kartın üzerine gelince gölgeyi artır (isteğe bağlı) */
-        [data-testid="stVerticalBlockBorderWrapper"]:hover {
-            box-shadow: 0 8px 16px 0 rgba(0,0,0,0.12);
+        /* Login Page - New Design */
+        .login-card {
+            background: white;
+            border-radius: 24px;
+            padding: 3rem 4rem; /* Daha fazla padding */
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1);
+            max-width: 500px; /* Kartın genişliğini sınırlar */
+            margin: 3rem auto; /* Ortalamak için */
+            text-align: center;
         }
 
-        /* Kenar çubuğundaki (sidebar) metrik kartları */
-        [data-testid="stSidebar"] [data-testid="stMetric"] {
-            background-color: rgba(255, 255, 255, 0.05); /* Hafif bir arkaplan */
-            border-radius: 10px;
-            padding: 15px;
+        .login-card .stImage { /* Logo için */
+            margin-bottom: 1.5rem;
+        }
+
+        .login-card h2 { /* Yeni başlık fontu ve rengi */
+            color: #333;
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            line-height: 1.3;
+        }
+
+        .login-card p { /* Alt metin için */
+            color: #666;
+            font-size: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        /* Toggle Button Group */
+        .toggle-container {
+            display: flex;
+            background-color: #f0f2f6; /* Hafif gri arka plan */
+            border-radius: 12px;
+            padding: 5px;
+            margin-bottom: 2rem;
+        }
+
+        .toggle-btn {
+            flex: 1;
+            padding: 0.75rem 0.5rem;
+            border: none;
+            border-radius: 9px;
+            background-color: transparent;
+            color: #666;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px; /* İkon ve metin arası boşluk */
+        }
+
+        .toggle-btn.active {
+            background: white;
+            color: #764ba2; /* Seçili olduğunda mor renk */
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+        }
+
+        /* Input Fields in Login Card */
+        .login-card input[type="text"],
+        .login-card input[type="password"] {
+            border: 1px solid #e0e0e0 !important;
+            border-radius: 12px !important; /* Daha yuvarlak */
+            padding: 0.8rem 1rem !important;
+            font-size: 1rem !important;
+            background-color: #f7f7f7 !important; /* Hafif gri arka plan */
+            transition: all 0.2s ease !important;
+        }
+
+        .login-card input[type="text"]:focus,
+        .login-card input[type="password"]:focus {
+            border-color: #764ba2 !important; /* Mor odak rengi */
+            box-shadow: 0 0 0 3px rgba(118, 75, 162, 0.1) !important;
+            background-color: white !important;
+        }
+
+        /* Streamlit Input Label */
+        .login-card [data-testid="stTextInput"] label {
+            color: #333 !important;
+            font-weight: 500 !important;
+            margin-bottom: 0.5rem !important;
+            display: block; /* Label'ı inputun üstüne alır */
+            text-align: left;
+        }
+
+        /* Primary Button in Login Card */
+        .login-card button[kind="primary"] {
+            margin-top: 1.5rem; /* Butonun üstünde boşluk */
+            width: 100%; /* Tam genişlik */
+            padding: 1rem 2rem !important; /* Daha büyük padding */
+            font-size: 1.1rem !important;
+            border-radius: 14px !important; /* Daha yuvarlak */
+        }
+
+        /* Sign Up Link */
+        .signup-link-container {
+            margin-top: 2rem;
+            font-size: 0.95rem;
+            color: #666;
+        }
+
+        .signup-link {
+            color: #764ba2 !important; /* Mor renk */
+            font-weight: 600 !important;
+            text-decoration: none !important;
+        }
+        .signup-link:hover {
+            text-decoration: underline !important;
         }
         </style>
         """, unsafe_allow_html=True)
