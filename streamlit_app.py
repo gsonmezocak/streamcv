@@ -506,67 +506,109 @@ def main_app():
                         st.error(f"An error occurred while saving your profile: {e}")
 
 # --- (GÜNCELLENDİ) LOGIN SAYFASI FONKSİYONU ---
+# --- LOGIN PAGE ---
 def login_page():
-    st.title("🤖 AI CV Matching Platform")
-    
-    st.markdown("Welcome! Log in or sign up to find your perfect job match.")
-    st.markdown("---")
+    # Sayfa arka planını koru
+    st.markdown('<style>.stApp {background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);}</style>', unsafe_allow_html=True)
 
-    with st.spinner("Loading platform stats..."):
-        total_jobs, total_profiles = get_platform_stats()
-        total_users = get_total_user_count()
-    
-    # (YENİ) Login sayfasındaki metrikleri de kart içine al
-    with st.container(border=True):
-        stat_col1, stat_col2, stat_col3 = st.columns(3)
-        with stat_col1:
-            st.metric(label="👥 Total Registered Users", value=total_users)
-        with stat_col2:
-            st.metric(label="🎯 Total Jobs in Pool", value=total_jobs)
-        with stat_col3:
-            st.metric(label="👤 Saved CV Profiles", value=total_profiles)
+    # Ortalanmış içerik için bir sütun kullanın
+    col1, col2, col3 = st.columns([1, 2, 1])
 
-    st.markdown("---")
-    
-    login_tab, signup_tab = st.tabs(["Login", "Sign Up"])
-    
-    with login_tab:
-        st.subheader("Login")
-        email = st.text_input("Email", key="login_email")
-        password = st.text_input("Password", type="password", key="login_pass")
+    with col2:
+        # Yeni login kartı stili
+        st.markdown('<div class="login-card">', unsafe_allow_html=True)
         
-        if st.button("Login", type="primary", key="login_button"):
+        # Logo ve başlık
+        # logoyu göstermek için st.image veya st.markdown kullanabilirsiniz.
+        # Bu örnek için sadece bir yer tutucu olarak metin kullanıyorum.
+        # Eğer bir logo dosyanız varsa, onu buraya yükleyebilirsiniz:
+        # st.image("yol/to/your/logo.png", width=100)
+        
+        # Veya sadece ikon ve metin:
+        st.markdown("""
+            <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 1.5rem;">
+                <img src="https://path/to/your/talentmatch_logo.png" alt="TalentMatch Logo" style="width: 70px; height: 70px; margin-bottom: 10px;">
+                <h2 style="color: #333; margin:0;">TalentMatch</h2>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        st.markdown("<p>Connect through your digital avatar</p>", unsafe_allow_html=True)
+
+        # Toggle Butonlar (Job Seeker / Recruiter)
+        user_role = st.session_state.get('user_role', 'job_seeker') # Varsayılan olarak İş Arayan
+
+        # JavaScript kullanarak sınıf eklemek için bir hile
+        st.markdown(f"""
+            <div class="toggle-container">
+                <button id="job_seeker_btn" class="toggle-btn {'active' if user_role == 'job_seeker' else ''}" onclick="window.parent.document.querySelector('[data-testid=\"st-text-input\"][data-current-value=\"job_seeker\"]').value='job_seeker'; window.parent.document.querySelector('#job_seeker_btn').click();">
+                    <span style="font-size: 1.2em;">💼</span> Job Seeker
+                </button>
+                <button id="recruiter_btn" class="toggle-btn {'active' if user_role == 'recruiter' else ''}" onclick="window.parent.document.querySelector('[data-testid=\"st-text-input\"][data-current-value=\"recruiter\"]').value='recruiter'; window.parent.document.querySelector('#recruiter_btn').click();">
+                    <span style="font-size: 1.2em;">🧑‍💼</span> Recruiter
+                </button>
+            </div>
+            <input type="hidden" id="user_role_selector" value="{user_role}">
+            <script>
+                // Streamlit'in butonları yeniden çizmesini engellemek için doğrudan manipülasyon
+                const jobSeekerBtn = document.getElementById('job_seeker_btn');
+                const recruiterBtn = document.getElementById('recruiter_btn');
+                
+                if (jobSeekerBtn && recruiterBtn) {{
+                    jobSeekerBtn.onclick = () => {{
+                        Streamlit.setComponentValue('user_role_selector', 'job_seeker');
+                        jobSeekerBtn.classList.add('active');
+                        recruiterBtn.classList.remove('active');
+                    }};
+                    recruiterBtn.onclick = () => {{
+                        Streamlit.setComponentValue('user_role_selector', 'recruiter');
+                        recruiterBtn.classList.add('active');
+                        jobSeekerBtn.classList.remove('active');
+                    }};
+                }}
+            </script>
+        """, unsafe_allow_html=True)
+        
+        # Geçici olarak bir Streamlit metin girişi ile role'ü yakalama
+        # Normalde bunu arayüzde göstermeyeceğiz, sadece değeri almak için kullanıyoruz.
+        selected_role_from_js = st.text_input("Selected Role", value=user_role, key="selected_role_hidden", label_visibility="hidden")
+        if selected_role_from_js != st.session_state.get('user_role'):
+            st.session_state['user_role'] = selected_role_from_js
+            st.experimental_rerun() # Rol değiştiğinde sayfayı yenile
+
+        # Login Formu
+        email = st.text_input("Email", key="login_email", placeholder="your@email.com")
+        password = st.text_input("Password", type="password", key="login_pass", placeholder="••••••••••")
+        
+        if st.button("Create Your Avatar & Start", type="primary", key="login_button_new"):
             if email and password:
                 try:
                     user = auth_client.sign_in_with_email_and_password(email, password)
                     st.session_state['user_email'] = user['email']
                     st.session_state['user_token'] = user['idToken']
+                    st.session_state['user_type'] = st.session_state.get('user_role', 'job_seeker') # Seçili rolü kaydet
                     st.rerun() 
                 except Exception as e:
-                    st.warning("Login failed. Please check your email and password.")
+                    st.error("❌ Invalid email or password. Please try again.")
             else:
-                st.warning("Please enter both email and password.")
-                
-    with signup_tab:
-        st.subheader("Create a New Account")
-        new_email = st.text_input("Email", key="signup_email")
-        new_password = st.text_input("Password", type="password", key="signup_pass")
+                st.warning("⚠️ Please enter both email and password.")
         
-        if st.button("Sign Up", type="primary", key="signup_button"):
-            if new_email and new_password:
-                try:
-                    user = auth_client.create_user_with_email_and_password(new_email, new_password)
-                    st.success("Account created successfully! Please go to the 'Login' tab to log in.")
-                except Exception as e:
-                    error_message = str(e)
-                    if "WEAK_PASSWORD" in error_message:
-                        st.warning("Password should be at least 6 characters.")
-                    elif "EMAIL_EXISTS" in error_message:
-                        st.warning("An account with this email already exists. Please log in.")
-                    elif "INVALID_EMAIL" in error_message:
-                        st.warning("Please enter a valid email address.")
-                    else:
-                        st.error("An unknown error occurred during sign up.")
+        # Sign up linki
+        st.markdown(f"""
+            <div class="signup-link-container">
+                Don't have an account? <a href="#" class="signup-link" onclick="window.parent.document.querySelector('[data-testid=\"st-text-input\"][data-current-value=\"show_signup\"]').value='show_signup'; window.parent.document.querySelector('.signup-link').click(); return false;">Sign up</a>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        # Kayıt olma linkine tıklandığında göstermek için bir mekanizma
+        show_signup_trigger = st.text_input("Show Signup Trigger", value="", key="signup_trigger_hidden", label_visibility="hidden")
+        if show_signup_trigger == "show_signup":
+            # Burada kayıt olma formunu gösterecek veya uygun bir yönlendirme yapacaksınız.
+            # Şimdilik basit bir uyarı ile gösterelim.
+            st.info("Kayıt olma sayfasına yönlendiriliyorsunuz (veya burada kayıt formunu göstereceğiz).")
+            # Gerçek bir uygulamada, burada `st.session_state['show_signup_form'] = True` gibi bir flag ayarlayıp
+            # bu flag'e göre bir kayıt formu gösterebilirsiniz.
+            
+        st.markdown('</div>', unsafe_allow_html=True) # .login-card div'i kapat
             else:
                 st.warning("Please enter both email and password.")
 
