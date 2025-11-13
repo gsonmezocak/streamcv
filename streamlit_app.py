@@ -609,8 +609,7 @@ def login_page():
             # bu flag'e göre bir kayıt formu gösterebilirsiniz.
             
         st.markdown('</div>', unsafe_allow_html=True) # .login-card div'i kapat
-            else:
-                st.warning("Please enter both email and password.")
+    
 
 # --- ANA MANTIK (GÜNCELLENDİ) ---
 load_custom_css() # CSS'i her iki sayfaya da (login / main) yükle
