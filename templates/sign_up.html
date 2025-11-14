@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Sign Up / Log In - TalentAI</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#005A9C",
+              "background-light": "#F5F7FA",
+              "background-dark": "#101922",
+              "neutral-dark": "#2D3748",
+              "accent": "#00C49A",
+            },
+            fontFamily: {
+              "display": ["Inter", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-neutral-dark dark:text-gray-200">
+<div class="relative flex min-h-screen w-full flex-col group/design-root overflow-x-hidden">
+<div class="layout-container flex h-full grow flex-col">
+<div class="flex flex-1 items-center justify-center p-4">
+<div class="flex w-full max-w-sm flex-col justify-center bg-white dark:bg-neutral-dark/40 p-8 shadow-lg rounded-xl">
+<div class="mx-auto flex w-full flex-col gap-8">
+<div class="flex flex-col gap-4 text-center">
+<div class="flex items-center justify-center gap-3">
+<span class="material-symbols-outlined text-primary text-3xl">hub</span>
+<span class="text-xl font-bold text-neutral-dark dark:text-white">TalentAI</span>
+</div>
+<div class="flex flex-col">
+<p id="form-title" class="text-neutral-dark dark:text-white text-2xl font-bold">Welcome Back</p>
+<p id="form-subtitle" class="text-neutral-dark/70 dark:text-gray-400 text-sm">Sign in or create an account to continue.</p>
+</div>
+</div>
+<div class="flex">
+<div class="flex h-10 flex-1 items-center justify-center rounded-lg bg-gray-100 dark:bg-neutral-dark/50 p-1">
+<label class="flex h-full grow cursor-pointer items-center justify-center rounded-md px-2 text-sm font-medium text-neutral-dark/60 dark:text-gray-400 has-[:checked]:bg-white dark:has-[:checked]:bg-neutral-dark/80 has-[:checked]:text-neutral-dark dark:has-[:checked]:text-white has-[:checked]:shadow-sm">
+<span class="truncate">Log In</span>
+<input class="invisible w-0" name="auth-toggle" type="radio" value="Log In"/>
+</label>
+<label class="flex h-full grow cursor-pointer items-center justify-center rounded-md px-2 text-sm font-medium text-neutral-dark/60 dark:text-gray-400 has-[:checked]:bg-white dark:has-[:checked]:bg-neutral-dark/80 has-[:checked]:text-neutral-dark dark:has-[:checked]:text-white has-[:checked]:shadow-sm">
+<span class="truncate">Sign Up</span>
+<input checked="" class="invisible w-0" name="auth-toggle" type="radio" value="Sign Up"/>
+</label>
+</div>
+</div>
+
+<form id="signup-form" class="flex flex-col gap-4" style="display: none;">
+    <div class="flex flex-col gap-1.5">
+        <label class="text-sm font-medium text-neutral-dark/80 dark:text-gray-300 sr-only" for="signup-email">Email Address</label>
+        <input class="h-12 w-full rounded-lg border border-gray-200 bg-gray-50 dark:border-neutral-dark/60 dark:bg-neutral-dark/50 px-4 text-base text-neutral-dark dark:text-white placeholder:text-neutral-dark/50 dark:placeholder:text-gray-500 focus:border-primary focus:ring-primary" id="signup-email" placeholder="Email Address" type="email" required/>
+    </div>
+    <div class="flex flex-col gap-1.5">
+        <label class="text-sm font-medium text-neutral-dark/80 dark:text-gray-300 sr-only" for="signup-password">Password</label>
+        <input class="h-12 w-full rounded-lg border border-gray-200 bg-gray-50 dark:border-neutral-dark/60 dark:bg-neutral-dark/50 px-4 text-base text-neutral-dark dark:text-white placeholder:text-neutral-dark/50 dark:placeholder:text-gray-500 focus:border-primary focus:ring-primary" id="signup-password" placeholder="Password" type="password" required/>
+    </div>
+    <button type="submit" class="flex min-w-[84px] w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 bg-primary text-white text-base font-bold leading-normal tracking-[0.015em] hover:bg-primary/90 focus:ring-2 focus:ring-primary/50">
+        <span class="truncate">Continue (Sign Up)</span>
+    </button>
+</form>
+
+<form id="login-form" class="flex flex-col gap-4" style="display: none;">
+    <div class="flex flex-col gap-1.5">
+        <label class="text-sm font-medium text-neutral-dark/80 dark:text-gray-300 sr-only" for="login-email">Email Address</label>
+        <input class="h-12 w-full rounded-lg border border-gray-200 bg-gray-50 dark:border-neutral-dark/60 dark:bg-neutral-dark/50 px-4 text-base text-neutral-dark dark:text-white placeholder:text-neutral-dark/50 dark:placeholder:text-gray-500 focus:border-primary focus:ring-primary" id="login-email" placeholder="Email Address" type="email" required/>
+    </div>
+    <div class="flex flex-col gap-1.5">
+        <label class="text-sm font-medium text-neutral-dark/80 dark:text-gray-300 sr-only" for="login-password">Password</label>
+        <input class="h-12 w-full rounded-lg border border-gray-200 bg-gray-50 dark:border-neutral-dark/60 dark:bg-neutral-dark/50 px-4 text-base text-neutral-dark dark:text-white placeholder:text-neutral-dark/50 dark:placeholder:text-gray-500 focus:border-primary focus:ring-primary" id="login-password" placeholder="Password" type="password" required/>
+    </div>
+    <button type="submit" class="flex min-w-[84px] w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 bg-primary text-white text-base font-bold leading-normal tracking-[0.015em] hover:bg-primary/90 focus:ring-2 focus:ring-primary/50">
+        <span class="truncate">Continue (Log In)</span>
+    </button>
+</form>
+
+
+<div id="cv-upload-box" class="flex flex-col items-center justify-center w-full" style="display: none;">
+<label class="flex flex-col items-center justify-center w-full h-24 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-bray-800 dark:bg-neutral-dark/50 hover:bg-gray-100 dark:border-neutral-dark/60 dark:hover:border-neutral-dark/40 dark:hover:bg-neutral-dark/60" for="dropzone-file">
+<div class="flex items-center justify-center gap-3">
+<span class="material-symbols-outlined text-gray-500 dark:text-gray-400">upload_file</span>
+<div class="text-left">
+<p class="text-sm text-gray-700 dark:text-gray-300 font-semibold">Upload your CV</p>
+<p class="text-xs text-gray-500 dark:text-gray-400">PDF or DOCX</p>
+</div>
+</div>
+<input class="hidden" id="dropzone-file" type="file"/>
+</label>
+</div>
+
+<div class="text-center">
+<p class="text-xs text-neutral-dark/50 dark:text-gray-500">
+By continuing, you agree to our <a class="underline hover:text-primary" href="#">Terms</a> and <a class="underline hover:text-primary" href="#">Privacy Policy</a>.
+</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<script src="/static/js/main.js"></script>
+
+</body></html>
