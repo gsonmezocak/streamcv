@@ -5,3 +5,5 @@ numpy
 pyrebase4
 pandas
 openpyxl
+PyMuPDF
+python-docx
