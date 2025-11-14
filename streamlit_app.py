@@ -62,11 +62,16 @@ st.markdown("""
 @st.cache_resource
 def init_firebase_admin():
     try:
+        # st.secrets'ten Firebase credentials'ı al
         creds_dict = dict(st.secrets["firebase_credentials"])
+        
+        # private_key'deki \n karakterlerini düzelt (Streamlit secrets için önemli)
         creds_dict["private_key"] = creds_dict["private_key"].replace(r'\n', '\n')
+        
         creds = credentials.Certificate(creds_dict)
         firebase_admin.initialize_app(creds)
     except ValueError:
+        # Uygulama zaten başlatılmışsa (hot reload) hata verme
         pass  
     except Exception as e:
         st.error(f"🔥 FİREBASE ADMİN HATASI: {e}")
@@ -77,6 +82,7 @@ def init_firebase_admin():
 @st.cache_resource
 def init_firebase_auth():
     try:
+        # Gerekli anahtarları st.secrets'ten al
         firebase_config = {
             "apiKey": st.secrets["FIREBASE_WEB_API_KEY"],
             "authDomain": f"{st.secrets['firebase_credentials']['project_id']}.firebaseapp.com",
@@ -100,7 +106,7 @@ def init_gemini():
         embedding_model = genai.GenerativeModel('models/text-embedding-004')
         return analysis_model, embedding_model
     except Exception as e:
-        st.error(f"💎 GEMİNİ BAĞLATMA HATASI: {e}")
+        st.error(f"💎 GEMİNİ BAĞLANTI HATASI: {e}")
         st.stop()
 
 # --- UYGULAMA BAŞLANGICI ---
@@ -182,6 +188,7 @@ def get_gemini_analysis(cv, job_post):
     """
     try:
         response = gemini_model.generate_content(prompt)
+        # Yanıttan JSON bloğunu temizle (bazen ```json ... ``` ile dönebiliyor)
         clean_json_text = re.sub(r"^```json\n", "", response.text)
         clean_json_text = re.sub(r"\n```$", "", clean_json_text).strip()
         analysis_data = json.loads(clean_json_text)
@@ -297,10 +304,16 @@ def main_app():
                     st.warning("Hiç iş ilanı bulunamadı. Lütfen önce ilan ekleyin.")
                     st.stop()
                 
-                cv_vector = get_embedding(cv_text)
+                # CV vektörünü profilden al, yoksa oluştur (normalde profilde olmalı)
+                cv_vector = profile.get("cv_vector")
                 if not cv_vector:
-                    st.error("CV'niz için 'parmak izi' oluşturulamadı. İşlem iptal edildi.")
-                    st.stop()
+                    st.info("Profilinizde CV 'parmak izi' bulunamadı, şimdi oluşturuluyor...")
+                    cv_vector = get_embedding(cv_text)
+                    if cv_vector:
+                         db.collection("user_profiles").document(user_id).update({"cv_vector": cv_vector})
+                    else:
+                        st.error("CV'niz için 'parmak izi' oluşturulamadı. İşlem iptal edildi.")
+                        st.stop()
                         
                 job_vectors = np.array([job['vector'] for job in all_jobs])
                 cv_vector_np = np.array(cv_vector)
@@ -450,4 +463,219 @@ def main_app():
                             job_vector = get_embedding(f"Title: {title}\n\nDescription: {description}")
                             
                             if job_vector:
-                                doc
+                                doc_ref = db.collection("job_postings").document()
+                                batch.set(doc_ref, {
+                                    "title": title,
+                                    "description": description,
+                                    "created_at": firestore.SERVER_TIMESTAMP,
+                                    "vector": job_vector,
+                                    "added_by": f"bulk_upload_{st.session_state['user_email']}"
+                                })
+                                success_count += 1
+                        
+                        batch.commit()
+                        st.success(f"Tamamlandı! {len(df)} ilandan {success_count} tanesi başarıyla işlendi ve yüklendi.")
+                        st.cache_data.clear()
+                        
+            except Exception as e:
+                st.error(f"Dosya işlenirken bir hata oluştu: {e}")
+
+
+    # --- (GÜNCELLENDİ) Sekme 3: Profilim (code.html'e benzetildi) ---
+    with tab3:
+        st.header("Profilim")
+        st.markdown("`code.html` tasarımınıza uygun olarak, profil bilgilerinizi ve CV'nizi buradan yönetebilirsiniz.")
+        
+        # Mevcut profili yükle
+        current_profile = get_user_profile(user_id)
+        
+        with st.form("profile_form"):
+            st.subheader("1. Profesyonel Detaylar")
+            st.markdown("`Auto-Matcher` sekmesinin çalışması için bu bilgileri doldurmanız gerekmektedir.")
+            
+            # code.html'den yeni alanlar
+            full_name = st.text_input(
+                "Tam Adınız (Full Name)", 
+                value=current_profile.get("full_name", "")
+            )
+            headline = st.text_input(
+                "Mesleki Başlık / Ünvan (Headline)", 
+                value=current_profile.get("headline", ""),
+                placeholder="Örn: Kıdemli Yazılım Geliştirici"
+            )
+            
+            st.divider()
+            
+            st.subheader("2. CV'niz")
+            st.markdown("AI eşleşmesi için CV'nizi yükleyin veya metin olarak yapıştırın.")
+
+            # sign_up.html'den dosya yükleyici
+            uploaded_cv_file = st.file_uploader(
+                "CV'nizi Yükleyin (PDF veya DOCX)",
+                type=["pdf", "docx", "txt"]
+            )
+            
+            new_cv_text_area = st.text_area(
+                "VEYA CV Metnini Buraya Yapıştırın", 
+                value=current_profile.get("cv_text", ""), 
+                height=300,
+                help="Eğer bir dosya yüklerseniz, bu alan dikkate alınmayacaktır."
+            )
+            
+            submitted = st.form_submit_button("Profili Kaydet", type="primary", use_container_width=True)
+            
+            if submitted:
+                final_cv_text = ""
+                
+                with st.spinner("Profil kaydediliyor..."):
+                    # Adım 1: CV Metnini Belirle
+                    if uploaded_cv_file is not None:
+                        st.info(f"'{uploaded_cv_file.name}' dosyası işleniyor...")
+                        file_bytes = uploaded_cv_file.getvalue()
+                        parsed_text = parse_cv_file(file_bytes, uploaded_cv_file.name)
+                        if parsed_text:
+                            final_cv_text = parsed_text
+                        else:
+                            st.error("Dosya okunamadı. Kayıt durduruldu.")
+                            st.stop()
+                    else:
+                        final_cv_text = new_cv_text_area
+                        
+                    if not final_cv_text:
+                        st.warning("Kaydedilecek bir CV metni bulunamadı. Lütfen bir dosya yükleyin veya metin yapıştırın.")
+                        st.stop()
+                        
+                    # Adım 2: CV Vektörünü Oluştur
+                    st.info("CV'niz için AI 'parmak izi' oluşturuluyor...")
+                    cv_vector = get_embedding(final_cv_text)
+                    
+                    if not cv_vector:
+                        st.error("CV'niz için 'parmak izi' oluşturulamadı. Profil kaydedilmedi.")
+                        st.stop()
+                        
+                    # Adım 3: Firestore'a Kaydet
+                    try:
+                        db.collection("user_profiles").document(user_id).set({
+                            "email": st.session_state['user_email'],
+                            "full_name": full_name,
+                            "headline": headline,
+                            "cv_text": final_cv_text,
+                            "cv_vector": cv_vector,
+                            "updated_at": firestore.SERVER_TIMESTAMP
+                        }, merge=True)
+                        st.success("Profiliniz başarıyla kaydedildi!")
+                        st.cache_data.clear() # Diğer sekmelerin veriyi yeniden çekmesi için
+                    except Exception as e:
+                        st.error(f"Profiliniz kaydedilirken bir hata oluştu: {e}")
+
+# --- (GÜNCELLENDİ) LOGIN SAYFASI (sign_up.html'e benzetildi) ---
+def login_page():
+    
+    # sign_up.html'deki gibi ortalanmış bir kutu oluştur
+    with st.container():
+        st.markdown(
+            f"""
+            <div style="
+                display: flex;
+                justify-content: center;
+                padding-top: 2rem;
+            ">
+                <div style="
+                    width: 100%;
+                    max-width: 448px; /* max-w-sm */
+                    background-color: white;
+                    padding: 2rem; /* p-8 */
+                    border-radius: 0.75rem; /* rounded-xl */
+                    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+                ">
+            """, 
+            unsafe_allow_html=True
+        )
+
+        # sign_up.html'den Başlık
+        st.markdown(
+            """
+            <div style="display: flex; align-items: center; justify-content: center; gap: 0.75rem; margin-bottom: 1.5rem;">
+                <span class="material-symbols-outlined" style="color: #005A9C; font-size: 2.2rem;">hub</span>
+                <span style="font-size: 1.5rem; font-weight: 700; color: #111827;">TalentAI</span>
+            </div>
+            <div style="text-align: center; margin-bottom: 1.5rem;">
+                <p style="font-size: 1.875rem; font-weight: 700; color: #111827;">Welcome Back</p>
+                <p style="font-size: 0.875rem; color: #6B7280;">Sign in or create an account to continue.</p>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        # sign_up.html'den Toggle
+        auth_mode = st.radio(
+            "Seçiminiz:",
+            ["Log In", "Sign Up"],
+            horizontal=True,
+            label_visibility="collapsed"
+        )
+        
+        st.markdown("---")
+        
+        # LOG IN FORMU
+        if auth_mode == "Log In":
+            st.subheader("Login")
+            email = st.text_input("Email", key="login_email", placeholder="Email Address")
+            password = st.text_input("Password", type="password", key="login_pass", placeholder="Password")
+            
+            if st.button("Continue (Login)", type="primary", key="login_button", use_container_width=True):
+                if email and password:
+                    try:
+                        user = auth_client.sign_in_with_email_and_password(email, password)
+                        st.session_state['user_email'] = user['email']
+                        st.session_state['user_token'] = user['idToken']
+                        st.rerun() 
+                    except Exception as e:
+                        st.warning("Giriş başarısız. Lütfen email ve şifrenizi kontrol edin.")
+                else:
+                    st.warning("Lütfen email ve şifrenizi girin.")
+        
+        # SIGN UP FORMU
+        if auth_mode == "Sign Up":
+            st.subheader("Create a New Account")
+            new_email = st.text_input("Email", key="signup_email", placeholder="Email Address")
+            new_password = st.text_input("Password", type="password", key="signup_pass", placeholder="Password")
+            
+            # (NOT: HTML'deki CV Yükleme alanı kasten buraya eklenmedi.
+            # En iyi pratik, kullanıcının önce hesabını oluşturması, 
+            # sonra giriş yapıp profilini doldurmasıdır.)
+            
+            if st.button("Continue (Sign Up)", type="primary", key="signup_button", use_container_width=True):
+                if new_email and new_password:
+                    try:
+                        user = auth_client.create_user_with_email_and_password(new_email, new_password)
+                        st.success("Hesap başarıyla oluşturuldu! Lütfen 'Log In' sekmesinden giriş yapın.")
+                    except Exception as e:
+                        error_message = str(e)
+                        if "WEAK_PASSWORD" in error_message:
+                            st.warning("Şifre en az 6 karakter olmalıdır.")
+                        elif "EMAIL_EXISTS" in error_message:
+                            st.warning("Bu email ile kayıtlı bir hesap zaten var. Lütfen giriş yapın.")
+                        elif "INVALID_EMAIL" in error_message:
+                            st.warning("Lütfen geçerli bir email adresi girin.")
+                        else:
+                            st.error("Kayıt sırasında bilinmeyen bir hata oluştu.")
+                else:
+                    st.warning("Lütfen email ve şifre girin.")
+        
+        # Footer
+        st.markdown(
+            """
+            <p style="font-size: 0.75rem; color: #6B7280; text-align: center; margin-top: 1.5rem;">
+                By continuing, you agree to our <a href="#" target="_blank">Terms</a> and <a href="#" target="_blank">Privacy Policy</a>.
+            </p>
+            </div></div>
+            """,
+            unsafe_allow_html=True
+        )
+
+# --- ANA MANTIK ---
+if st.session_state['user_email']:
+    main_app()
+else:
+    login_page()
